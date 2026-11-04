@@ -33,7 +33,7 @@ const FFMPEG_GUESSES = [
 
 export default {
   id: 'voice-lab',
-  name: '语音对话',
+  name: '鲸鱼娘通话',
   version: '0.1.0',
   api: 1,
   description: '桌面语音小窗的后端：语音转文字 → 她回话 → 合成语音（说话记录不发到 QQ）',
