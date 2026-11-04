@@ -1,0 +1,68 @@
+{
+  "format": 1,
+  "title": {
+    "zh": "鲸鱼娘通话 · 插件索引",
+    "en": "Whale Call plugin index"
+  },
+  "description": {
+    "zh": "桌面语音小窗：按住说话就能和你的鲸鱼娘直接讲话。",
+    "en": "A desktop voice window: hold to talk to your whale girl."
+  },
+  "metadata": {
+    "categories": {
+      "voice": {
+        "title": {
+          "zh": "语音与通话",
+          "en": "Voice & calls"
+        }
+      },
+      "chat": {
+        "title": {
+          "zh": "聊天增强",
+          "en": "Chat"
+        }
+      }
+    },
+    "labels": {},
+    "sortKeys": {}
+  },
+  "plugins": [
+    {
+      "name": "dsh-whale-call",
+      "title": {
+        "zh": "鲸鱼娘通话",
+        "en": "Whale Girl Call"
+      },
+      "description": {
+        "zh": "在 DSH 侧边栏一键拉起桌面语音小窗：按住说话或自动检测说话，本地识别后交给她回话，再用她自己的声音念出来。对话不发 QQ，但人格、长期记忆、说话风格照常生效。依赖 dsh-aurabot-qq。",
+        "en": "Launch a desktop voice window from the DSH sidebar. Push-to-talk or auto VAD, local speech recognition, reply in her own voice. Conversations stay out of QQ while persona, long-term memory and speaking style still apply. Requires dsh-aurabot-qq."
+      },
+      "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IumyuOmxvOWomOmAmuivnSI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNGY4Y2ZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzFiM2Y4ZiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iMTYiIGZpbGw9InVybCgjZykiLz4KICA8IS0tIOm6puWFi+mjjiAtLT4KICA8cmVjdCB4PSIyNyIgeT0iMTMiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxOSIgcng9IjUiIGZpbGw9IiNmZmYiLz4KICA8cGF0aCBkPSJNMjEuNSAyOGExMC41IDEwLjUgMCAwIDAgMjEgMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPGxpbmUgeDE9IjMyIiB5MT0iMzguNSIgeDI9IjMyIiB5Mj0iNDQiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIzLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDwhLS0g6bK46bG85bC+5be054K557yAIC0tPgogIDxwYXRoIGQ9Ik0xMyA0N2M0LTMgOC0zIDEyIDAtNCAzLTggMy0xMiAweiIgZmlsbD0iIzhmZDBmZiIgb3BhY2l0eT0iLjkiLz4KICA8cGF0aCBkPSJNMzkgNDdjNC0zIDgtMyAxMiAwLTQgMy04IDMtMTIgMHoiIGZpbGw9IiM4ZmQwZmYiIG9wYWNpdHk9Ii45Ii8+Cjwvc3ZnPgo=",
+      "homepage": "https://www.npmjs.com/package/dsh-whale-call",
+      "metadata": {
+        "category": "voice",
+        "keywords": [
+          "voice",
+          "speech",
+          "tts",
+          "asr",
+          "desktop",
+          "aurabot",
+          "electron"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1793804413,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": ">=0.2.0-rc.1"
+          }
+        }
+      ]
+    }
+  ]
+}

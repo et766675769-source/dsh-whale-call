@@ -1,0 +1,7 @@
+{
+  "name": "aurabot-voice-lab-window",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Aurabot 语音对话小窗（Electron）",
+  "main": "main.js"
+}

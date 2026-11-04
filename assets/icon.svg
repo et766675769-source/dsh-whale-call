@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="鲸鱼娘通话">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f8cff"/>
+      <stop offset="1" stop-color="#1b3f8f"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#g)"/>
+  <!-- 麦克风 -->
+  <rect x="27" y="13" width="10" height="19" rx="5" fill="#fff"/>
+  <path d="M21.5 28a10.5 10.5 0 0 0 21 0" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
+  <line x1="32" y1="38.5" x2="32" y2="44" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
+  <!-- 鲸鱼尾巴点缀 -->
+  <path d="M13 47c4-3 8-3 12 0-4 3-8 3-12 0z" fill="#8fd0ff" opacity=".9"/>
+  <path d="M39 47c4-3 8-3 12 0-4 3-8 3-12 0z" fill="#8fd0ff" opacity=".9"/>
+</svg>

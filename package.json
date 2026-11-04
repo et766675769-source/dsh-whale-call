@@ -1,0 +1,61 @@
+{
+  "name": "dsh-whale-call",
+  "version": "0.1.0",
+  "description": "鲸鱼娘通话：在 DSH 侧边栏一键拉起桌面语音小窗，按住说话就能和你的鲸鱼娘直接讲话（依赖 dsh-aurabot-qq）",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "voice",
+    "speech",
+    "asr",
+    "tts",
+    "desktop",
+    "electron",
+    "aurabot"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "icon": "assets/icon.svg",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "payload",
+    "assets/icon.svg",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": ["slots"],
+      "external": ["react"]
+    },
+    "compatibility": {
+      "dshReleases": {
+        "0.2.1-rc.2": "compatible"
+      }
+    },
+    "engines": {
+      "dsh": ">=0.2.0-rc.1"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4",
+    "react": "^18.2.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

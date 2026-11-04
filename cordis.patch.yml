@@ -1,0 +1,7 @@
+# dsh-whale-call bundle patch
+#
+# 把「鲸鱼娘通话」这一行插进 profile 的插件树。
+# 宿主半边只负责把语音模块和小窗投放进 Aurabot 的目录，界面在 ./client。
+- insert:
+    - id: whale-call
+      name: dsh-whale-call
