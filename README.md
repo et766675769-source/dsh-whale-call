@@ -25,35 +25,47 @@
 
 ## 安装
 
-**方式一：从 GitHub 直装（不需要 npm 账号）**
+### 方式一：插件市场（推荐）
 
-```bash
-dsh plugin add git+https://github.com/et766675769-source/dsh-whale-call.git --profile web
-```
+本仓库自带一份符合 DSH 市场格式（format 1）的索引文件。把它的 URL 加进插件市场即可搜索安装。
 
-**方式二：插件市场**
-
-在 DSH 的插件市场里添加本仓库的索引地址，然后就能搜到「鲸鱼娘通话」：
+**索引 URL：**
 
 ```
 https://raw.githubusercontent.com/et766675769-source/dsh-whale-call/main/market/index.json
 ```
 
-**方式三：npm**（发布后可用）
+**添加步骤：**
+
+1. 打开 DSH 的**插件市场**（侧栏的插件市场入口，或 设置 → 插件市场）
+2. 进入**「发现」**页
+3. 点右上角的菜单 → **「管理索引源…」**（页面空白时直接有「添加索引源」按钮）
+4. 在**「索引 URL」**里粘贴上面那条地址，确认
+5. 回到发现页，搜**「鲸鱼娘通话」**，点安装
+6. **重启 DSH**（插件会在启动时把语音模块和小窗投放进 Aurabot 目录）
+
+> 安装后的版本固定指向某个 commit，索引更新后需要重新安装才会升级。
+
+### 方式二：从 GitHub 直装
+
+不需要市场，也不需要有 npm 账号：
+
+```bash
+dsh plugin add git+https://github.com/et766675769-source/dsh-whale-call.git --profile web
+```
+
+也可以钉死版本：
+
+```bash
+dsh plugin add "git+https://github.com/et766675769-source/dsh-whale-call.git#ef932abc06d4a94a47067cb919cc97dce0cfa7f6" --profile web
+```
+
+### 方式三：npm
+
+**暂未发布**（本项目先走 GitHub 分发）。等发布到 npm 后可用：
 
 ```bash
 dsh plugin add dsh-whale-call --profile web
-```
-
-> 仓库主页：https://github.com/et766675769-source/dsh-whale-call
-
-装完后**重启一次 DSH**：插件会在启动时把语音模块和小窗程序投放进 Aurabot 的目录。
-
-投放位置：
-
-```
-<DSH_HOME>/plugins-data/aurabot/modules/voice-lab/index.mjs
-<DSH_HOME>/plugins-data/aurabot/modules-data/voice-lab/app/
 ```
 
 ---
@@ -121,3 +133,49 @@ const HANGOVER_MS = 800    // 停多久算说完
 ## License
 
 MIT
+
+---
+
+## 维护者：改完代码怎么发新版
+
+1. 改代码，然后升 `package.json` 的 `version`（已发布的版本号不能重复用）
+2. 提交并推送：
+
+   ```bash
+   git add -A
+   git commit -m "feat: ..."
+   git push origin main
+   ```
+
+3. 用新的 commit 重建索引：
+
+   ```powershell
+   $env:WHALE_SRC='git'
+   $env:WHALE_GIT_URL='https://github.com/et766675769-source/dsh-whale-call'
+   $env:WHALE_GIT_COMMIT=(git rev-parse HEAD)
+   node market/build-index.mjs      # 会调用官方 parser 自检
+   ```
+
+4. 提交并推送 `market/index.json`：
+
+   ```bash
+   git add market/index.json
+   git commit -m "chore: 更新市场索引到 <新版本>"
+   git push origin main
+   ```
+
+> 索引里的 `source.commit` 决定别人装到哪个版本。**代码改了但索引没重建，别人装到的还是旧代码。**
+
+### 索引格式的关键规则
+
+生成时容易踩（都是官方 parser 硬校验的）：
+
+| 字段 | 规则 |
+|---|---|
+| `format` | 必须是数字 `1` |
+| 本地化文本的 key | **只能小写**：`zh` / `en`；写 `zh-CN` 会报 `must be keyed by a lowercase language id` |
+| `publishTimestamp` | **Unix 秒**，不是毫秒 |
+| `icon` | `data:image/(svg+xml\|png\|jpeg\|webp);base64,…`，解码后 ≤ 32 KiB；或相对索引 URL 的路径 |
+| `metadata.category` | 必须先在 `metadata.categories` 里声明过 |
+| `source.type` | `npm` 或 `git`；git 需要 40 位小写 commit SHA |
+
