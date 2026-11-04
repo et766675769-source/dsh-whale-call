@@ -16,6 +16,17 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 const iconSvg = fs.readFileSync(path.join(root, 'assets', 'icon.svg'))
 const icon = 'data:image/svg+xml;base64,' + iconSvg.toString('base64')
 
+// 发布渠道：默认 npm；WHALE_SRC=git 时走 GitHub（无需 npm 账号）
+const GIT_URL = String(process.env.WHALE_GIT_URL || '').trim()
+const GIT_COMMIT = String(process.env.WHALE_GIT_COMMIT || '').trim()
+const SOURCE = String(process.env.WHALE_SRC || 'npm').toLowerCase() === 'git'
+  ? { type: 'git', url: GIT_URL, commit: GIT_COMMIT }
+  : { type: 'npm' }
+if (SOURCE.type === 'git' && !/^[0-9a-f]{40}$/.test(SOURCE.commit)) {
+  console.error('WHALE_GIT_COMMIT 必须是 40 位小写 commit SHA')
+  process.exit(1)
+}
+
 const index = {
   format: 1,
   title: { zh: '鲸鱼娘通话 · 插件索引', en: 'Whale Call plugin index' },
@@ -40,7 +51,7 @@ const index = {
         en: 'Launch a desktop voice window from the DSH sidebar. Push-to-talk or auto VAD, local speech recognition, reply in her own voice. Conversations stay out of QQ while persona, long-term memory and speaking style still apply. Requires dsh-aurabot-qq.',
       },
       icon,
-      homepage: `https://www.npmjs.com/package/${pkg.name}`,
+      homepage: SOURCE.type === 'git' ? GIT_URL : `https://www.npmjs.com/package/${pkg.name}`,
       metadata: {
         category: 'voice',
         keywords: ['voice', 'speech', 'tts', 'asr', 'desktop', 'aurabot', 'electron'],
@@ -49,7 +60,9 @@ const index = {
         {
           version: pkg.version,
           publishTimestamp: Math.floor(Date.now() / 1000),
-          source: { type: 'npm' },
+          // WHALE_SRC=git 时用 GitHub 直装（不需要 npm 账号）：
+          //   WHALE_GIT_URL + WHALE_GIT_COMMIT（40 位小写 SHA）
+          source: SOURCE,
           engines: { dsh: '>=0.2.0-rc.1' },
         },
       ],

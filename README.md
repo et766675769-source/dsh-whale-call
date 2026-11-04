@@ -25,11 +25,27 @@
 
 ## 安装
 
+**方式一：从 GitHub 直装（不需要 npm 账号）**
+
+```bash
+dsh plugin add git+https://github.com/et766675769-source/dsh-whale-call.git --profile web
+```
+
+**方式二：插件市场**
+
+在 DSH 的插件市场里添加本仓库的索引地址，然后就能搜到「鲸鱼娘通话」：
+
+```
+https://raw.githubusercontent.com/et766675769-source/dsh-whale-call/main/market/index.json
+```
+
+**方式三：npm**（发布后可用）
+
 ```bash
 dsh plugin add dsh-whale-call --profile web
 ```
 
-或在 DSH 设置 → 插件市场里搜「鲸鱼娘通话」。
+> 仓库主页：https://github.com/et766675769-source/dsh-whale-call
 
 装完后**重启一次 DSH**：插件会在启动时把语音模块和小窗程序投放进 Aurabot 的目录。
 

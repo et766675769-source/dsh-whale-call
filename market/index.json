@@ -38,7 +38,7 @@
         "en": "Launch a desktop voice window from the DSH sidebar. Push-to-talk or auto VAD, local speech recognition, reply in her own voice. Conversations stay out of QQ while persona, long-term memory and speaking style still apply. Requires dsh-aurabot-qq."
       },
       "icon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IumyuOmxvOWomOmAmuivnSI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNGY4Y2ZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzFiM2Y4ZiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iMTYiIGZpbGw9InVybCgjZykiLz4KICA8IS0tIOm6puWFi+mjjiAtLT4KICA8cmVjdCB4PSIyNyIgeT0iMTMiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxOSIgcng9IjUiIGZpbGw9IiNmZmYiLz4KICA8cGF0aCBkPSJNMjEuNSAyOGExMC41IDEwLjUgMCAwIDAgMjEgMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPGxpbmUgeDE9IjMyIiB5MT0iMzguNSIgeDI9IjMyIiB5Mj0iNDQiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIzLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDwhLS0g6bK46bG85bC+5be054K557yAIC0tPgogIDxwYXRoIGQ9Ik0xMyA0N2M0LTMgOC0zIDEyIDAtNCAzLTggMy0xMiAweiIgZmlsbD0iIzhmZDBmZiIgb3BhY2l0eT0iLjkiLz4KICA8cGF0aCBkPSJNMzkgNDdjNC0zIDgtMyAxMiAwLTQgMy04IDMtMTIgMHoiIGZpbGw9IiM4ZmQwZmYiIG9wYWNpdHk9Ii45Ii8+Cjwvc3ZnPgo=",
-      "homepage": "https://www.npmjs.com/package/dsh-whale-call",
+      "homepage": "https://github.com/et766675769-source/dsh-whale-call",
       "metadata": {
         "category": "voice",
         "keywords": [
@@ -54,9 +54,11 @@
       "versions": [
         {
           "version": "0.1.0",
-          "publishTimestamp": 1793804413,
+          "publishTimestamp": 1793804495,
           "source": {
-            "type": "npm"
+            "type": "git",
+            "url": "https://github.com/et766675769-source/dsh-whale-call",
+            "commit": "ef932abc06d4a94a47067cb919cc97dce0cfa7f6"
           },
           "engines": {
             "dsh": ">=0.2.0-rc.1"
