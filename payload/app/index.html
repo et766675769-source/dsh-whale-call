@@ -22,6 +22,7 @@
   #room svg { width:100%; height:100%; display:block; }
   .roomImg { width:100%; height:100%; object-fit:cover; display:block; }
   #room .roomWrap {
+    position:relative; z-index:1;
     width:100%; height:100%;
     animation: roomDrift 34s ease-in-out infinite alternate;
     will-change: transform;
@@ -29,7 +30,7 @@
 
   /* 舞台底部往日志区过渡，别硬切 */
   #roomFade {
-    position:absolute; left:0; right:0; bottom:0; height:48px; z-index:2;
+    position:absolute; left:0; right:0; bottom:0; height:48px; z-index:6;
     background:linear-gradient(180deg, rgba(8,14,26,0) 0%, rgba(8,14,26,.85) 100%);
   }
   @keyframes roomDrift {
@@ -42,7 +43,7 @@
   @keyframes snowFall {
     0%   { transform: translateY(-8px); opacity: 0; }
     12%  { opacity: .95; }
-    100% { transform: translateY(96px); opacity: 0; }
+    100% { transform: translateY(150px); opacity: 0; }
   }
   body.fx-snow .flake {
     opacity: .9;
@@ -58,31 +59,31 @@
 
   /* ===== 叠加特效（贴着 AI 图上的位置） ===== */
   #fxSnow {
-    position:absolute; overflow:hidden; pointer-events:none;
+    position:absolute; overflow:hidden; pointer-events:none; z-index:5;
     left:54%; top:4%; width:41%; height:38%;
   }
   .flake {
     position:absolute; width:3px; height:3px; border-radius:50%;
-    background:#eaf4ff; box-shadow:0 0 4px #cfe4ff; opacity:0;
+    background:#ffffff; box-shadow:0 0 6px #dff0ff, 0 0 2px #ffffff; opacity:0;
   }
   body.fx-snow .flake { animation-name: snowFall; animation-timing-function: linear; animation-iteration-count: infinite; }
 
   .fxGlow {
-    position:absolute; pointer-events:none; border-radius:50%;
-    background: radial-gradient(circle, rgba(255,214,150,.55) 0%, rgba(255,214,150,.22) 40%, rgba(255,214,150,0) 70%);
+    position:absolute; pointer-events:none; border-radius:50%; z-index:5;
+    background: radial-gradient(circle, rgba(255,206,130,.85) 0%, rgba(255,196,110,.42) 38%, rgba(255,190,100,0) 72%);
     opacity:0;
   }
   body.fx-lamp #fxLampA { animation: lampBreath 3.4s ease-in-out infinite; }
   body.fx-lamp #fxLampB { animation: lampBreath 4.2s ease-in-out infinite .7s; }
-  @keyframes lampBreath { 0%,100% { opacity:.15 } 50% { opacity:.55 } }
+  @keyframes lampBreath { 0%,100% { opacity:.28 } 50% { opacity:.85 } }
 
   #fxRug {
-    position:absolute; pointer-events:none; border-radius:50%;
+    position:absolute; pointer-events:none; border-radius:50%; z-index:4;
     background: radial-gradient(circle, rgba(150,210,240,.32) 0%, rgba(150,210,240,.10) 55%, rgba(150,210,240,0) 72%);
     opacity:0;
   }
   body.fx-rug #fxRug { animation: rugPulse 7s ease-in-out infinite; }
-  @keyframes rugPulse { 0%,100% { opacity:.05; transform:scale(1) } 50% { opacity:.35; transform:scale(1.04) } }
+  @keyframes rugPulse { 0%,100% { opacity:.12; transform:scale(1) } 50% { opacity:.55; transform:scale(1.03) } }
 
   /* 特效开关按钮 */
   #fx { position:absolute; right:8px; top:42px; display:flex; gap:5px; z-index:3; }
@@ -163,7 +164,7 @@
   .empty { padding:10px; font-size:12px; color:var(--dim); text-align:center; }
 </style>
 </head>
-<body>
+<body class="fx-snow fx-lamp fx-rug">
 <div id="card">
   <div id="room">
   <div id="fxSnow"></div>
@@ -562,14 +563,14 @@ window.addEventListener('beforeunload', () => { try { stopListen() } catch {} })
 ;(function () {
   const box = document.getElementById('fxSnow')
   if (!box) return
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 34; i++) {
     const f = document.createElement('span')
     f.className = 'flake'
     f.style.left = (Math.random() * 100).toFixed(1) + '%'
-    f.style.top = (Math.random() * 100).toFixed(1) + '%'
+    f.style.top = (-Math.random() * 30).toFixed(1) + '%'
     f.style.animationDuration = (3.5 + Math.random() * 4).toFixed(1) + 's'
     f.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's'
-    f.style.width = f.style.height = (1.5 + Math.random() * 2).toFixed(1) + 'px'
+    f.style.width = f.style.height = (2.5 + Math.random() * 2.5).toFixed(1) + 'px'
     box.appendChild(f)
   }
 })()
@@ -578,7 +579,8 @@ window.addEventListener('beforeunload', () => { try { stopListen() } catch {} })
 const FX = ['snow', 'lamp', 'rug']
 function applyFx() {
   for (const k of FX) {
-    const on = localStorage.getItem('fx:' + k) === '1'
+    const raw = localStorage.getItem('fx:' + k)
+    const on = raw === null ? true : raw === '1'
     document.body.classList.toggle('fx-' + k, on)
     const b = document.querySelector('.fx-btn[data-fx="' + k + '"]')
     if (b) b.classList.toggle('on', on)
