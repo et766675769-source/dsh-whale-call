@@ -1,6 +1,6 @@
 {
   "name": "dsh-whale-call",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "description": "鲸鱼娘通话：在 DSH 侧边栏一键拉起桌面语音小窗，按住说话就能和你的鲸鱼娘直接讲话（依赖 dsh-aurabot-qq）",
   "keywords": [
     "dsh",
