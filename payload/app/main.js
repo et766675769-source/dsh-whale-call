@@ -20,8 +20,8 @@ const BASE = String(process.env.AURABOT_BASE || 'http://127.0.0.1:3080').replace
 const TOKEN = String(process.env.PET_TOKEN || '')
 const PACK = String(process.env.PET_PACK || 'default')
 
-const W = 320
-const H = 470
+const W = 340
+const H = 600
 let win = null
 
 // ---------- 窗口位置：记住上次位置，但越界（比如拔掉副屏）就回主屏 ----------
@@ -64,12 +64,12 @@ function rememberBounds() {
 function createWindow() {
   const b = loadBounds() || defaultBounds()
   win = new BrowserWindow({
-    width: b.width || W,
-    height: b.height || H,
+    width: W,
+    height: H,
     x: b.x,
     y: b.y,
-    minWidth: 260,
-    minHeight: 420,
+    minWidth: 300,
+    minHeight: 540,
     frame: false,
     transparent: true,
     resizable: true,
