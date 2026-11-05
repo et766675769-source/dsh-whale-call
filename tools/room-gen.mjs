@@ -97,7 +97,7 @@ add(poly([iso(0, 0, WALL_H), iso(0, F, WALL_H), iso(0, F, WALL_H - 0.14), iso(0,
   const q = [iso(x0, 0, z1), iso(x1, 0, z1), iso(x1, 0, z0), iso(x0, 0, z0)]
   add(poly(q, '#08101f', 'stroke="#39507a" stroke-width="4"'))
   // 月亮（窗内偏右）
-  const mc = iso(x0 + (x1 - x0) * 0.74, 0, (z0 + z1) / 2 + 0.34)
+  const mc = iso(x0 + (x1 - x0) * 0.7, 0, z1 - 0.42)
   add(`<circle cx="${mc[0].toFixed(1)}" cy="${mc[1].toFixed(1)}" r="58" fill="url(#moonGlow)"/>`)
   add(`<circle cx="${mc[0].toFixed(1)}" cy="${mc[1].toFixed(1)}" r="15" fill="${C.moon}"/>`)
   // 窗格（十字）
@@ -142,26 +142,43 @@ add(poly([iso(0, 0, WALL_H), iso(0, F, WALL_H), iso(0, F, WALL_H - 0.14), iso(0,
 }
 
 
-// ---------- 左墙挂钟 ----------
+// ---------- 左墙挂钟（按墙面透视：旋转 + 纵向压缩） ----------
 {
-  const cy0 = 3.55, cz = 2.5
+  const cy0 = 3.55, cz = 2.55
   const c = iso(0, cy0, cz)
-  const rot = -26.57   // 左墙面（x=0）在屏幕上的倾斜角
-  const rx = K * 0.44, ry = K * 0.44 * 0.42
-  add(`<g transform="rotate(${rot} ${c[0].toFixed(1)} ${c[1].toFixed(1)})">`)
-  add(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#24334f" stroke="#44608f" stroke-width="3"/>`)
-  add(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(rx * 0.8).toFixed(1)}" ry="${(ry * 0.8).toFixed(1)}" fill="#0d1728"/>`)
-  add(`<line x1="${c[0].toFixed(1)}" y1="${c[1].toFixed(1)}" x2="${c[0].toFixed(1)}" y2="${(c[1] - ry * 0.62).toFixed(1)}" stroke="#b9cdea" stroke-width="2.2"/>`)
-  add(`<line x1="${c[0].toFixed(1)}" y1="${c[1].toFixed(1)}" x2="${(c[0] + rx * 0.5).toFixed(1)}" y2="${c[1].toFixed(1)}" stroke="#b9cdea" stroke-width="1.8"/>`)
+  const R = K * 0.46
+  add(`<g transform="translate(${c[0].toFixed(1)},${c[1].toFixed(1)}) rotate(-26.57) scale(1,0.56)">`)
+  add(`<circle cx="0" cy="0" r="${(R + 3).toFixed(1)}" fill="#2a3a58" stroke="#4a6699" stroke-width="3"/>`)
+  add(`<circle cx="0" cy="0" r="${R.toFixed(1)}" fill="#0d1728"/>`)
+  // 刻度
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2
+    const r1 = R * 0.78, r2 = R * 0.94
+    add(`<line x1="${(Math.sin(a) * r1).toFixed(1)}" y1="${(-Math.cos(a) * r1).toFixed(1)}" x2="${(Math.sin(a) * r2).toFixed(1)}" y2="${(-Math.cos(a) * r2).toFixed(1)}" stroke="#7f9cc4" stroke-width="1.4" opacity="0.8"/>`)
+  }
+  // 时针 / 分针
+  add(`<line x1="0" y1="0" x2="0" y2="${(-R * 0.45).toFixed(1)}" stroke="#dbe7fb" stroke-width="3.2" stroke-linecap="round"/>`)
+  add(`<line x1="0" y1="0" x2="${(R * 0.58).toFixed(1)}" y2="0" stroke="#dbe7fb" stroke-width="2.4" stroke-linecap="round"/>`)
+  add(`<circle cx="0" cy="0" r="2.6" fill="#dbe7fb"/>`)
   add('</g>')
 }
 
-// ---------- 地毯（房间中央偏前） ----------
+// ---------- 地毯（加厚 + 放大） ----------
 {
   const c = iso(4.3, 4.4, 0.01)
-  add(`<ellipse id="rugBase" cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(K * 1.55).toFixed(1)}" ry="${(K * 0.78).toFixed(1)}" fill="${C.rug}" opacity="0.95"/>`)
-  add(`<ellipse id="rugRing" cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(K * 1.1).toFixed(1)}" ry="${(K * 0.55).toFixed(1)}" fill="${C.rugIn}" opacity="0.9" stroke="#7fd8ef" stroke-width="2" stroke-dasharray="10 14"/>`)
-  add(`<path d="M ${(c[0] - 22).toFixed(1)} ${(c[1] + 3).toFixed(1)} q 22 -17 22 5 q 0 -22 22 -5 q -5 17 -22 12 q -17 5 -22 -12 z" fill="#cfe8f5" opacity="0.5"/>`)
+  const rx = K * 2.0, ry = K * 1.0
+  // 厚度：底下垫一层深色，向下偏移，形成边沿
+  add(`<ellipse cx="${c[0].toFixed(1)}" cy="${(c[1] + 9).toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#0f2b3d"/>`)
+  add(`<ellipse cx="${c[0].toFixed(1)}" cy="${(c[1] + 4).toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#17405a"/>`)
+  // 毯面
+  add(`<ellipse id="rugBase" cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="${C.rug}" opacity="0.98"/>`)
+  // 内圈 + 流光线
+  add(`<ellipse id="rugRing" cx="${c[0].toFixed(1)}" cy="${(c[1] - 2).toFixed(1)}" rx="${(rx * 0.72).toFixed(1)}" ry="${(ry * 0.72).toFixed(1)}" fill="none" stroke="#7fd8ef" stroke-width="3" stroke-dasharray="12 16" opacity="0.9"/>`)
+  add(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(rx * 0.42).toFixed(1)}" ry="${(ry * 0.42).toFixed(1)}" fill="${C.rugIn}" opacity="0.95"/>`)
+  // 鲸鱼尾图案
+  add(`<path d="M ${(c[0] - 26).toFixed(1)} ${(c[1] + 4).toFixed(1)} q 26 -20 26 6 q 0 -26 26 -6 q -6 20 -26 14 q -20 6 -26 -14 z" fill="#cfe8f5" opacity="0.6"/>`)
+  // 高光边（厚度反光）
+  add(`<ellipse cx="${c[0].toFixed(1)}" cy="${(c[1] - 3).toFixed(1)}" rx="${(rx * 0.98).toFixed(1)}" ry="${(ry * 0.98).toFixed(1)}" fill="none" stroke="#4d7f9c" stroke-width="1.5" opacity="0.55"/>`)
 }
 
 // ---------- 床（靠左墙，长边沿 y 方向） ----------
@@ -255,21 +272,32 @@ add(poly([iso(0, 0, WALL_H), iso(0, F, WALL_H), iso(0, F, WALL_H - 0.14), iso(0,
 // ---------- 懒人沙发（前景右侧） ----------
 {
   const b = iso(6.3, 2.7, 0)
-  add(`<ellipse cx="${b[0].toFixed(1)}" cy="${(b[1] + 6).toFixed(1)}" rx="${(K * 0.95).toFixed(1)}" ry="${(K * 0.42).toFixed(1)}" fill="#1b2739" opacity="0.55"/>`)
-  add(`<ellipse cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" rx="${(K * 0.9).toFixed(1)}" ry="${(K * 0.7).toFixed(1)}" fill="#2f6f8f"/>`)
-  add(`<ellipse cx="${(b[0] - 4).toFixed(1)}" cy="${(b[1] - 10).toFixed(1)}" rx="${(K * 0.82).toFixed(1)}" ry="${(K * 0.6).toFixed(1)}" fill="#3d8aa8"/>`)
-  add(`<ellipse cx="${(b[0] - 6).toFixed(1)}" cy="${(b[1] - 16).toFixed(1)}" rx="${(K * 0.66).toFixed(1)}" ry="${(K * 0.46).toFixed(1)}" fill="#4ba3c2"/>`)
+  add(`<ellipse cx="${b[0].toFixed(1)}" cy="${(b[1] + 6).toFixed(1)}" rx="${(K * 0.95).toFixed(1)}" ry="${(K * 0.42).toFixed(1)}" fill="#1b2739" opacity="0.5"/>`)
+  add(`<ellipse cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" rx="${(K * 0.9).toFixed(1)}" ry="${(K * 0.7).toFixed(1)}" fill="#b8912a"/>`)
+  add(`<ellipse cx="${(b[0] - 4).toFixed(1)}" cy="${(b[1] - 10).toFixed(1)}" rx="${(K * 0.82).toFixed(1)}" ry="${(K * 0.6).toFixed(1)}" fill="#e0b53a"/>`)
+  add(`<ellipse cx="${(b[0] - 6).toFixed(1)}" cy="${(b[1] - 16).toFixed(1)}" rx="${(K * 0.66).toFixed(1)}" ry="${(K * 0.46).toFixed(1)}" fill="#f2cc5c"/>`)
   // 抱枕
   add(`<ellipse cx="${(b[0] + 12).toFixed(1)}" cy="${(b[1] - 20).toFixed(1)}" rx="${(K * 0.3).toFixed(1)}" ry="${(K * 0.22).toFixed(1)}" fill="#e0ebff" opacity="0.9"/>`)
 }
 
-// ---------- 墙角植物（靠后墙角） ----------
+// ---------- 绿植（梯形花盆，靠左前角） ----------
 {
   const x = 0.35, y = 6.35
-  add(box(x, y, 0, 0.45, 0.45, 0.36, SHADE(0, '#6a5546', '#523f34', '#3d2e26')))
-  const c = iso(x + 0.2, y + 0.2, 0.55)
-  add(`<path d="M ${c[0].toFixed(1)} ${c[1].toFixed(1)} q -20 -30 2 -50 q 18 20 -2 50 z" fill="#2f6b4a" opacity="0.95"/>`)
-  add(`<path d="M ${c[0].toFixed(1)} ${c[1].toFixed(1)} q 22 -26 4 -44 q -18 16 -4 44 z" fill="#3d8a5f" opacity="0.9"/>`)
+  const c = iso(x + 0.24, y + 0.24, 0)
+  const wTop = K * 0.30, wBot = K * 0.21, hPot = K * 0.40
+  // 盆体（上宽下窄的梯形）
+  add(`<path d="M ${(c[0] - wTop).toFixed(1)} ${c[1].toFixed(1)} L ${(c[0] + wTop).toFixed(1)} ${c[1].toFixed(1)} L ${(c[0] + wBot).toFixed(1)} ${(c[1] + hPot).toFixed(1)} L ${(c[0] - wBot).toFixed(1)} ${(c[1] + hPot).toFixed(1)} Z" fill="#9a7a62"/>`)
+  // 盆体右侧阴影
+  add(`<path d="M ${c[0].toFixed(1)} ${c[1].toFixed(1)} L ${(c[0] + wTop).toFixed(1)} ${c[1].toFixed(1)} L ${(c[0] + wBot).toFixed(1)} ${(c[1] + hPot).toFixed(1)} L ${c[0].toFixed(1)} ${(c[1] + hPot).toFixed(1)} Z" fill="#00000022"/>`)
+  // 盆沿
+  add(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${wTop.toFixed(1)}" ry="${(wTop * 0.34).toFixed(1)}" fill="#b08f74"/>`)
+  // 泥土
+  add(`<ellipse cx="${c[0].toFixed(1)}" cy="${(c[1] + 1).toFixed(1)}" rx="${(wTop * 0.8).toFixed(1)}" ry="${(wTop * 0.26).toFixed(1)}" fill="#3a2f28"/>`)
+  // 叶子
+  const lc = iso(x + 0.24, y + 0.24, 0.55)
+  add(`<path d="M ${lc[0].toFixed(1)} ${(lc[1] + 10).toFixed(1)} q -24 -34 2 -58 q 22 24 -2 58 z" fill="#2f6b4a" opacity="0.95"/>`)
+  add(`<path d="M ${lc[0].toFixed(1)} ${(lc[1] + 10).toFixed(1)} q 26 -30 5 -50 q -22 20 -5 50 z" fill="#3d8a5f" opacity="0.9"/>`)
+  add(`<path d="M ${lc[0].toFixed(1)} ${(lc[1] + 10).toFixed(1)} q -6 -40 1 -56 q 10 20 -1 56 z" fill="#4ea877" opacity="0.85"/>`)
 }
 
 const body = out.join('\n')
