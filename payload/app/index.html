@@ -102,6 +102,8 @@ let current = null        // 正在播放的音频
 let busy = false          // 一轮还没结束
 let idleTimer = null
 let urlCache = new Map()
+let botAnimUntil = 0        // 她自己挑的动作，这段时间内别被待机动画盖掉
+let animPollTimer = null
 
 // —— 按住说话 ——
 let recording = false
@@ -142,7 +144,7 @@ async function playAnim(pool) {
 function startIdle() {
   stopIdle()
   playAnim(IDLE)
-  idleTimer = setInterval(() => { if (!current) playAnim(IDLE) }, 9000)
+  idleTimer = setInterval(() => { if (!current && Date.now() > botAnimUntil) playAnim(IDLE) }, 9000)
 }
 function stopIdle() { if (idleTimer) { clearInterval(idleTimer); idleTimer = null } }
 
@@ -435,9 +437,27 @@ document.getElementById('btnMin').onclick = () => window.bridge.win('min')
 document.getElementById('btnClose').onclick = () => { stopListen(); window.bridge.win('close') }
 window.addEventListener('beforeunload', () => { try { stopListen() } catch {} })
 
+// ---------- 她挑的动作 ----------
+// 后端模块给她注册了 whale_anim 工具；她一旦调用，这里轮询到就切过去播。
+async function pollBotAnim() {
+  try {
+    const r = await window.bridge.animPoll()
+    if (r && r.ok && r.anim && r.anim.id) {
+      const name = r.anim.name || r.anim.id
+      hint.textContent = '她换了个动作：' + name
+      botAnimUntil = Date.now() + 8000
+      playAnim([r.anim.id])
+      setState('她换动作了')
+      setTimeout(() => { if (!current) setState(listening ? '聆听中' : '待命') }, 1500)
+    }
+  } catch { /* 后端没起来就安静跳过 */ }
+  animPollTimer = setTimeout(pollBotAnim, 900)
+}
+
 // ---------- 启动 ----------
 ;(async () => {
   startIdle()
+  pollBotAnim()
   const s = await window.bridge.status().catch(() => null)
   if (s && s.ok) setState('待命')
   else hint.textContent = '连不上 Aurabot 的 voice-lab 模块'

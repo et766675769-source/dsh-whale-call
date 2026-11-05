@@ -229,6 +229,65 @@ export default {
         .trim()
     }
 
+    // ---------- 她可以自己挑动作 ----------
+    // 素材清单在桌宠包里：{ "吃白饭": "anim-035", ... }（106 个）
+    function animManifest() {
+      const dirs = [
+        join(api.dataDir(), '..', 'pet', 'packs', 'default-manifest.json'),
+        join(api.dataDir(), '..', '..', 'pet', 'packs', 'default-manifest.json'),
+      ]
+      for (const f of dirs) {
+        try {
+          const j = JSON.parse(fs.readFileSync(f, 'utf8'))
+          const m = new Map()
+          for (const [name, id] of Object.entries(j || {})) if (typeof id === 'string' && /^anim-\d+$/i.test(id)) m.set(name, id)
+          if (m.size) return m
+        } catch { /* 换下一个位置 */ }
+      }
+      return new Map()
+    }
+
+    // 小窗每次 poll 取一条，取完就清空
+    let pendingAnim = null
+    const animState = { last: '', lastAt: 0, lastBy: '' }
+
+    function setAnim(nameOrId, by) {
+      const key = String(nameOrId || '').trim()
+      if (!key) return { ok: false, message: '没给动作名' }
+      const byName = animManifest()
+      let id = byName.get(key) || ''
+      let name = key
+      if (!id && /^anim-\d+$/i.test(key)) {
+        id = key
+        for (const [n, i] of byName) if (i === key) { name = n; break }
+      }
+      if (!id) return { ok: false, message: '没有这个动作：' + key }
+      pendingAnim = { id, name, at: Date.now() }
+      animState.last = id
+      animState.lastAt = Date.now()
+      animState.lastBy = by || ''
+      return { ok: true, id, name }
+    }
+
+    // 给她的工具：自己决定桌面上那只在播什么
+    try {
+      api.tool(({ chat }) => {
+        if (chat && chat.kind === 'system') return []   // 后台任务里不需要动形象
+        const names = [...animManifest().keys()]
+        const sample = names.slice(0, 60).join('、')
+        return [api.defineTool({
+          name: 'whale_anim',
+          description: '换你桌面上那只小鲸鱼娘当前播放的动作。想让主人看到你在吃白饭、打哈欠、伸懒腰、害羞、跳舞、偷吃零食被抓之类的时候用它。'
+            + 'action 直接写中文动作名。素材共 ' + names.length + ' 个，例如：' + sample,
+          properties: { action: { type: 'string', description: '中文动作名，比如「吃白饭」「打瞌睡被惊醒」「点击回应-害羞惊讶」' } },
+          required: ['action'],
+          execute: async ({ action }) => setAnim(action, 'tool'),
+        })]
+      })
+    } catch (error) {
+      log.debug('[voice-lab] 注册动作工具失败：' + String(error?.message || error))
+    }
+
     // ---------- 拦截她对这个伪会话的回复 ----------
     try {
       api.on('reply', (text, info) => {
@@ -346,6 +405,19 @@ export default {
 
     // ---------- 接口 ----------
     try {
+      api.route('/anim/list', async () => {
+        const byName = animManifest()
+        return { ok: true, count: byName.size, items: [...byName.entries()].map(([name, id]) => ({ name, id })) }
+      })
+      api.route('/anim/poll', async () => {
+        const p = pendingAnim
+        pendingAnim = null
+        return { ok: true, anim: p }
+      })
+      api.route('/anim/set', async (req) => {
+        const b = await readJson(req)
+        return setAnim(b.name || b.id, 'manual')
+      })
       api.route('/window/start', async () => startWindow())
       api.route('/window/stop', async () => stopWindow())
       api.route('/window/status', async () => {
@@ -370,6 +442,7 @@ export default {
         chatId: VOICE_CHAT_ID,
         ffmpeg: Boolean(ffmpegCached()),
         pending: Boolean(pending),
+        anim: { last: animState.last, at: animState.lastAt, by: animState.lastBy, available: animManifest().size },
       }))
 
       // 一轮对话：{ audio: base64, ext } 或 { text }

@@ -142,6 +142,26 @@ ipcMain.handle('status', async () => {
   }
 })
 
+/** 动作清单（中文名 → anim-NNN） */
+ipcMain.handle('animList', async () => {
+  try {
+    const r = await fetch(`${BASE}/aurabot/api/ext/voice-lab/anim/list`, { signal: AbortSignal.timeout(8000) })
+    return await r.json()
+  } catch (error) {
+    return { ok: false, items: [], message: String((error && error.message) || error) }
+  }
+})
+
+/** 她选了动作没有（取一次就清空） */
+ipcMain.handle('animPoll', async () => {
+  try {
+    const r = await fetch(`${BASE}/aurabot/api/ext/voice-lab/anim/poll`, { signal: AbortSignal.timeout(6000) })
+    return await r.json()
+  } catch {
+    return { ok: true, anim: null }
+  }
+})
+
 ipcMain.handle('win', (_e, action) => {
   if (!win || win.isDestroyed()) return false
   if (action === 'close') win.close()
