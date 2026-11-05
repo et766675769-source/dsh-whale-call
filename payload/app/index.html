@@ -136,6 +136,10 @@
     background-color: rgba(255,0,0,.08) !important;
     opacity:1 !important;
   }
+  body.fx-cal #fxSnow,
+  body.fx-cal .fxGlow,
+  body.fx-cal .fxShade,
+  body.fx-cal #fxRug { pointer-events:auto !important; cursor:move; user-select:none; touch-action:none; }
   body.fx-cal #fxSnow { outline-color:#5ad2ff !important; }
   body.fx-cal #fxRug { outline-color:#ffe14d !important; }
   body.fx-cal .fxShade { outline-color:#ff9f43 !important; }
@@ -649,8 +653,9 @@ window.addEventListener('beforeunload', () => { try { stopListen() } catch {} })
 // ---------- 房间与特效锚点 ----------
 // 每张图家具位置不同，所以各自的窗、灯、地毯位置单独配置（百分比，相对房间层）
 const ROOMS = [
+  { id: 'v2-blue-cozy',    name: '蓝白·生活感', night: true, win: [16, 5, 33, 36], lamps: [[0, 28, 22, 22], [64, 24, 22, 22]], shades: [[3, 37, 7, 8], [73, 30, 8, 6]], rug: [33, 66, 45, 20] },
   { id: 'v1-blue-calm',    name: '蓝白·整洁', night: true,  win: [18, 8, 34, 40], lamps: [[28, 28, 24, 24], [58, 34, 22, 22]], shades: [[29, 26, 10, 9], [59, 32, 9, 8]], rug: [38, 62, 36, 26] },
-  { id: 'v2-blue-cozy',    name: '蓝白·生活感', night: true, win: [6, 4, 42, 52],  lamps: [[14, 28, 24, 24], [56, 28, 22, 22]], shades: [[15, 26, 10, 9], [57, 26, 9, 8]], rug: [36, 64, 40, 26] },
+
   { id: 'v3-blue-detail',  name: '蓝白·串灯',  night: true,  win: [10, 6, 36, 42], lamps: [[70, 30, 22, 22], [26, 48, 20, 20]], shades: [[71, 28, 9, 8], [27, 46, 9, 8]], rug: [40, 66, 34, 24] },
   { id: 'w1-warm-wood',    name: '暖木小屋',   night: true,  win: [38, 8, 34, 40], lamps: [[50, 32, 24, 24], [10, 36, 22, 22]], shades: [[51, 30, 10, 9], [11, 34, 9, 8]], rug: [30, 66, 44, 26] },
   { id: 'n1-neon-cyber',   name: '霓虹赛博',   night: true,  win: [42, 6, 50, 50], lamps: [[54, 28, 26, 26], [74, 44, 22, 22]], shades: [[55, 26, 10, 9], [75, 42, 9, 8]], rug: [40, 68, 36, 24] },
@@ -658,7 +663,7 @@ const ROOMS = [
 ]
 
 const $ = (id) => document.getElementById(id)
-let roomIdx = 0
+let roomIdx = 0 /* 默认 v2-blue-cozy */
 try {
   const saved = Number(localStorage.getItem('room:idx'))
   if (Number.isInteger(saved) && saved >= 0 && saved < ROOMS.length) roomIdx = saved
@@ -674,21 +679,118 @@ function place(el, rect) {
   el.style.height = rect[3] + '%'
 }
 
+// 每个房间的锚点：优先用 localStorage 里手动调过的
+function anchorsOf(r) {
+  const def = {
+    win: r.win || null,
+    lamp0: r.lamps[0] || null,
+    lamp1: r.lamps[1] || null,
+    shade0: r.shades[0] || null,
+    shade1: r.shades[1] || null,
+    rug: r.rug || null,
+  }
+  try {
+    const raw = localStorage.getItem('anchors:' + r.id)
+    if (!raw) return def
+    const saved = JSON.parse(raw)
+    return { ...def, ...saved }
+  } catch { return def }
+}
+
+function saveAnchors(r, a) {
+  try { localStorage.setItem('anchors:' + r.id, JSON.stringify(a)) } catch { /* 忽略 */ }
+}
+
+let curAnchors = null
+
 function applyRoom(i) {
   const r = ROOMS[i]
   if (!r) return
+  curAnchors = anchorsOf(r)
   const img = $('roomImg')
   if (img) img.src = 'rooms/' + r.id + '.webp'
-  place($('fxSnow'), r.night ? r.win : null)
-  place($('fxLampA'), r.lamps[0] || null)
-  place($('fxLampB'), r.lamps[1] || null)
-  place($('fxShadeA'), r.shades[0] || null)
-  place($('fxShadeB'), r.shades[1] || null)
-  place($('fxRug'), r.rug)
-  // 白天的房间不显示雪与暖光
+  place($('fxSnow'), r.night ? curAnchors.win : null)
+  place($('fxLampA'), curAnchors.lamp0)
+  place($('fxLampB'), curAnchors.lamp1)
+  place($('fxShadeA'), curAnchors.shade0)
+  place($('fxShadeB'), curAnchors.shade1)
+  place($('fxRug'), curAnchors.rug)
   document.body.classList.toggle('room-day', !r.night)
   const hintEl = $('hint')
   if (hintEl && !hintEl.dataset.busy) hintEl.textContent = '房间：' + r.name
+}
+
+// ---------- 拖动调整（调试模式） ----------
+const DRAG_BOXES = [
+  ['fxSnow', 'win'], ['fxLampA', 'lamp0'], ['fxLampB', 'lamp1'],
+  ['fxShadeA', 'shade0'], ['fxShadeB', 'shade1'], ['fxRug', 'rug'],
+]
+
+function bindDrag() {
+  const room = $('room')
+  if (!room) return
+  for (const [id, key] of DRAG_BOXES) {
+    const el = $(id)
+    if (!el || el.dataset.dragBound) continue
+    el.dataset.dragBound = '1'
+    el.addEventListener('pointerdown', (e) => {
+      if (!document.body.classList.contains('fx-cal')) return
+      const v = curAnchors && curAnchors[key]
+      if (!v) return
+      e.preventDefault()
+      e.stopPropagation()
+      const rr = room.getBoundingClientRect()
+      const sx = e.clientX, sy = e.clientY
+      const orig = v.slice()
+      let moved = false
+      const move = (ev) => {
+        const dx = (ev.clientX - sx) / rr.width * 100
+        const dy = (ev.clientY - sy) / rr.height * 100
+        if (Math.abs(dx) + Math.abs(dy) > 0.3) moved = true
+        v[0] = +(orig[0] + dx).toFixed(1)
+        v[1] = +(orig[1] + dy).toFixed(1)
+        place(el, v)
+        const info = $('calInfo')
+        if (info) info.textContent = calInfoText()
+      }
+      const up = () => {
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', up)
+        if (moved) {
+          saveAnchors(ROOMS[roomIdx], curAnchors)
+          const info = $('calInfo')
+          if (info) info.textContent = calInfoText()
+        }
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', up)
+    })
+    // Shift + 拖动改变大小
+    el.addEventListener('pointerdown', (e) => {
+      if (!document.body.classList.contains('fx-cal') || !e.shiftKey) return
+      const v = curAnchors && curAnchors[key]
+      if (!v) return
+      e.preventDefault()
+      e.stopPropagation()
+      const rr = room.getBoundingClientRect()
+      const sx = e.clientX, sy = e.clientY
+      const orig = v.slice()
+      const move = (ev) => {
+        v[2] = Math.max(2, +(orig[2] + (ev.clientX - sx) / rr.width * 100).toFixed(1))
+        v[3] = Math.max(2, +(orig[3] + (ev.clientY - sy) / rr.height * 100).toFixed(1))
+        place(el, v)
+        const info = $('calInfo')
+        if (info) info.textContent = calInfoText()
+      }
+      const up = () => {
+        window.removeEventListener('pointermove', move)
+        window.removeEventListener('pointerup', up)
+        saveAnchors(ROOMS[roomIdx], curAnchors)
+      }
+      window.addEventListener('pointermove', move)
+      window.addEventListener('pointerup', up)
+    })
+  }
 }
 
 // 换景：单击切换，长按 600ms 进/出调试模式
@@ -698,14 +800,15 @@ let longPressed = false
 
 function calInfoText() {
   const r = ROOMS[roomIdx]
-  const fmt = (a) => (a ? '[' + a.join(',') + ']' : '—')
+  const a = curAnchors || anchorsOf(r)
+  const fmt = (v) => (v ? '[' + v.join(',') + ']' : '—')
   return '调试模式（长按"换景"退出）\n'
     + '房间 ' + (roomIdx + 1) + '/' + ROOMS.length + '  ' + r.id + '  ' + r.name + '\n'
-    + '窗   win    ' + fmt(r.win) + '\n'
-    + '灯A  lamp   ' + fmt(r.lamps[0]) + '   罩 ' + fmt(r.shades[0]) + '\n'
-    + '灯B  lamp   ' + fmt(r.lamps[1]) + '   罩 ' + fmt(r.shades[1]) + '\n'
-    + '毯   rug    ' + fmt(r.rug) + '\n'
-    + '网格：红线 10%，蓝线 50%；左上角为 (0,0)'
+    + '窗   ' + fmt(a.win) + '\n'
+    + '灯A  ' + fmt(a.lamp0) + ' 罩 ' + fmt(a.shade0) + '\n'
+    + '灯B  ' + fmt(a.lamp1) + ' 罩 ' + fmt(a.shade1) + '\n'
+    + '毯   ' + fmt(a.rug) + '\n'
+    + '直接拖动彩框可移动 · Shift+拖动改大小 · 松手自动保存'
 }
 
 function toggleCal() {
@@ -742,6 +845,7 @@ if (roomBtn) {
   roomBtn.addEventListener('pointercancel', cancel)
 }
 applyRoom(roomIdx)
+bindDrag()
 
 // ---------- 氛围特效开关 ----------
 const FX = ['snow', 'lamp', 'rug']
@@ -877,6 +981,18 @@ async function pollBotAnim() {
   if (s && s.ok) setState('待命')
   else hint.textContent = '连不上 Aurabot 的 voice-lab 模块'
 })()
+// RESET_HOTKEY：调试模式按 R 重置本房间锚点
+window.addEventListener('keydown', (e) => {
+  if (!document.body.classList.contains('fx-cal')) return
+  if (e.key !== 'r' && e.key !== 'R') return
+  const r = ROOMS[roomIdx]
+  try { localStorage.removeItem('anchors:' + r.id) } catch { /* 忽略 */ }
+  applyRoom(roomIdx)
+  bindDrag()
+  const info = $('calInfo')
+  if (info) info.textContent = calInfoText()
+})
+
 // CAL_HOOK：?cal=1 直接进调试模式
 if (location.search.indexOf('cal=1') >= 0) setTimeout(toggleCal, 400)
 </script>
