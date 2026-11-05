@@ -53,12 +53,12 @@
       },
       "versions": [
         {
-          "version": "0.1.4",
-          "publishTimestamp": 1793889839,
+          "version": "0.1.5",
+          "publishTimestamp": 1793891639,
           "source": {
             "type": "git",
             "url": "https://github.com/et766675769-source/dsh-whale-call",
-            "commit": "a02902a3e2e042c81a3ebd33b93e3d221918959d"
+            "commit": "aca1a9c21cb638be88ac90059bb53faddb0ff2ed"
           },
           "engines": {
             "dsh": ">=0.2.0-rc.1"
