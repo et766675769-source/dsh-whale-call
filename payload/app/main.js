@@ -177,6 +177,8 @@ ipcMain.handle('animPoll', async () => {
   }
 })
 
+ipcMain.handle('topState', () => (win && !win.isDestroyed() ? win.isAlwaysOnTop() : false))
+
 ipcMain.handle('win', (_e, action) => {
   if (!win || win.isDestroyed()) return false
   if (action === 'close') win.close()

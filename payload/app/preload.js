@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('bridge', {
   animPoll: () => ipcRenderer.invoke('animPoll'),
   animSet: (name) => ipcRenderer.invoke('animSet', name),
   win: (action) => ipcRenderer.invoke('win', action),
+  topState: () => ipcRenderer.invoke('topState'),
   bounds: () => ipcRenderer.invoke('bounds'),
 })
