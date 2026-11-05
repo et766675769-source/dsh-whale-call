@@ -55,6 +55,30 @@
   @keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(61,220,132,.35); } 50% { box-shadow:0 0 0 6px rgba(61,220,132,0); } }
 
   #hint { font-size:11px; color:var(--dim); text-align:center; min-height:16px; }
+
+  /* 右键动作菜单 */
+  #menu {
+    position:absolute; z-index:50; display:none; flex-direction:column;
+    width:262px; max-height:300px; border-radius:12px; overflow:hidden;
+    background:rgba(22,27,38,.98); border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 12px 32px rgba(0,0,0,.5);
+  }
+  #menu.open { display:flex; }
+  #menuSearch {
+    border:none; outline:none; padding:8px 10px; font-size:12.5px;
+    background:rgba(255,255,255,.06); color:var(--fg);
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  #menuList { overflow-y:auto; padding:4px; }
+  #menuList::-webkit-scrollbar { width:6px; }
+  #menuList::-webkit-scrollbar-thumb { background:rgba(255,255,255,.18); border-radius:3px; }
+  .mi {
+    padding:6px 9px; border-radius:7px; font-size:12.5px; cursor:pointer;
+    display:flex; justify-content:space-between; gap:8px; white-space:nowrap;
+  }
+  .mi:hover { background:rgba(79,140,255,.28); }
+  .mi .id { color:var(--dim); font-size:11px; }
+  .empty { padding:10px; font-size:12px; color:var(--dim); text-align:center; }
 </style>
 </head>
 <body>
@@ -71,6 +95,11 @@
     <div id="stageFallback">🐟</div>
     <div id="state">待命</div>
     <div id="level"><i></i></div>
+  </div>
+
+  <div id="menu">
+    <input id="menuSearch" placeholder="搜动作名…" autocomplete="off">
+    <div id="menuList"></div>
   </div>
 
   <div id="log"></div>
@@ -437,6 +466,93 @@ document.getElementById('btnMin').onclick = () => window.bridge.win('min')
 document.getElementById('btnClose').onclick = () => { stopListen(); window.bridge.win('close') }
 window.addEventListener('beforeunload', () => { try { stopListen() } catch {} })
 
+// ---------- 右键动作菜单 ----------
+const menu = document.getElementById('menu')
+const menuList = document.getElementById('menuList')
+const menuSearch = document.getElementById('menuSearch')
+let animItems = []
+let animLoaded = false
+
+async function loadAnimList() {
+  if (animLoaded) return animItems
+  try {
+    const r = await window.bridge.animList()
+    if (r && r.ok) { animItems = r.items || []; animLoaded = true }
+  } catch { /* 后端没起来就空着 */ }
+  return animItems
+}
+
+function renderMenu(filter) {
+  const q = String(filter || '').trim().toLowerCase()
+  const items = q ? animItems.filter((x) => x.name.toLowerCase().includes(q) || x.id.includes(q)) : animItems
+  menuList.innerHTML = ''
+  if (!items.length) {
+    const d = document.createElement('div')
+    d.className = 'empty'
+    d.textContent = animLoaded ? '没有匹配的动作' : '拿不到动作清单（后端没起来？）'
+    menuList.appendChild(d)
+    return
+  }
+  const frag = document.createDocumentFragment()
+  for (const it of items) {
+    const row = document.createElement('div')
+    row.className = 'mi'
+    const name = document.createElement('span')
+    name.textContent = it.name
+    const id = document.createElement('span')
+    id.className = 'id'
+    id.textContent = it.id
+    row.appendChild(name)
+    row.appendChild(id)
+    row.onclick = async () => {
+      closeMenu()
+      const r = await window.bridge.animSet(it.name).catch(() => null)
+      if (r && r.ok) {
+        botAnimUntil = Date.now() + 8000
+        playAnim([it.id])
+        hint.textContent = '换成：' + it.name
+        setState('换动作')
+      } else {
+        hint.textContent = '没换成：' + ((r && r.message) || '未知原因')
+      }
+    }
+    frag.appendChild(row)
+  }
+  menuList.appendChild(frag)
+}
+
+function openMenu(x, y) {
+  menu.classList.add('open')
+  menuSearch.value = ''
+  loadAnimList().then((list) => { renderMenu(''); hint.textContent = list.length ? '挑一个动作' : '' })
+  // 摆位：别超出窗口边界
+  const rect = menu.getBoundingClientRect()
+  const w = rect.width || 262
+  const h = rect.height || 300
+  const maxX = window.innerWidth - w - 6
+  const maxY = window.innerHeight - h - 6
+  menu.style.left = Math.max(6, Math.min(x, maxX)) + 'px'
+  menu.style.top = Math.max(6, Math.min(y, maxY)) + 'px'
+  menuSearch.focus()
+}
+
+function closeMenu() { menu.classList.remove('open') }
+
+menuSearch.addEventListener('input', () => renderMenu(menuSearch.value))
+menuSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeMenu()
+  if (e.key === 'Enter') { const first = menuList.querySelector('.mi'); if (first) first.click() }
+})
+document.addEventListener('click', (e) => { if (!menu.contains(e.target)) closeMenu() })
+
+// 右键形象（或整个舞台）弹菜单
+for (const node of [pet, document.getElementById('stage')]) {
+  node.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+    openMenu(e.clientX, e.clientY)
+  })
+}
+
 // ---------- 她挑的动作 ----------
 // 后端模块给她注册了 whale_anim 工具；她一旦调用，这里轮询到就切过去播。
 async function pollBotAnim() {
@@ -458,6 +574,7 @@ async function pollBotAnim() {
 ;(async () => {
   startIdle()
   pollBotAnim()
+  hint.textContent = '松开发送 · 右键形象挑动作'
   const s = await window.bridge.status().catch(() => null)
   if (s && s.ok) setState('待命')
   else hint.textContent = '连不上 Aurabot 的 voice-lab 模块'

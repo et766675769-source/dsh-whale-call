@@ -152,6 +152,21 @@ ipcMain.handle('animList', async () => {
   }
 })
 
+/** 手动指定一个动作（右键菜单用） */
+ipcMain.handle('animSet', async (_e, name) => {
+  try {
+    const r = await fetch(`${BASE}/aurabot/api/ext/voice-lab/anim/set`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: String(name || '') }),
+      signal: AbortSignal.timeout(8000),
+    })
+    return await r.json()
+  } catch (error) {
+    return { ok: false, message: String((error && error.message) || error) }
+  }
+})
+
 /** 她选了动作没有（取一次就清空） */
 ipcMain.handle('animPoll', async () => {
   try {

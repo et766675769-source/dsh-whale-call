@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('bridge', {
   status: () => ipcRenderer.invoke('status'),
   animList: () => ipcRenderer.invoke('animList'),
   animPoll: () => ipcRenderer.invoke('animPoll'),
+  animSet: (name) => ipcRenderer.invoke('animSet', name),
   win: (action) => ipcRenderer.invoke('win', action),
   bounds: () => ipcRenderer.invoke('bounds'),
 })
