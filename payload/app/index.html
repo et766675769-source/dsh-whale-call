@@ -118,6 +118,34 @@
   body.room-day .fxShade, body.room-day #fxWarm { display:none; }
   body.room-day #fxSnow { display:none; }
 
+  /* ===== 调试模式 ===== */
+  #calGrid {
+    position:absolute; inset:0; z-index:9; display:none; pointer-events:none;
+    background-image:
+      repeating-linear-gradient(to right, rgba(255,90,90,.30) 0 1px, transparent 1px 10%),
+      repeating-linear-gradient(to bottom, rgba(255,90,90,.30) 0 1px, transparent 1px 10%),
+      repeating-linear-gradient(to right, rgba(90,200,255,.45) 0 1px, transparent 1px 50%);
+  }
+  body.fx-cal #calGrid { display:block; }
+  body.fx-cal #fxSnow,
+  body.fx-cal .fxGlow,
+  body.fx-cal .fxShade,
+  body.fx-cal #fxRug,
+  body.fx-cal #fxWarm {
+    outline:2px dashed rgba(255,80,80,.95) !important;
+    background-color: rgba(255,0,0,.08) !important;
+    opacity:1 !important;
+  }
+  body.fx-cal #fxSnow { outline-color:#5ad2ff !important; }
+  body.fx-cal #fxRug { outline-color:#ffe14d !important; }
+  body.fx-cal .fxShade { outline-color:#ff9f43 !important; }
+  #calInfo {
+    position:absolute; left:6px; right:6px; bottom:6px; z-index:10; display:none;
+    font:11px/1.35 ui-monospace,Consolas,monospace; color:#fff;
+    background:rgba(0,0,0,.66); border-radius:8px; padding:6px 8px; white-space:pre-wrap;
+  }
+  body.fx-cal #calInfo { display:block; }
+
   /* 特效开关按钮 */
   #fx { position:absolute; right:8px; top:42px; display:flex; gap:5px; z-index:3; }
   .fx-btn {
@@ -209,6 +237,8 @@
   <div id="fxRug"></div>
   <div class="roomWrap"><img id="roomImg" class="roomImg" src="rooms/v2-blue-cozy.webp" alt=""></div>
   <div id="roomFade"></div>
+  <div id="calGrid"></div>
+  <div id="calInfo"></div>
 </div>
 
   <div id="bar">
@@ -661,14 +691,55 @@ function applyRoom(i) {
   if (hintEl && !hintEl.dataset.busy) hintEl.textContent = '房间：' + r.name
 }
 
-// 换景
+// 换景：单击切换，长按 600ms 进/出调试模式
 const roomBtn = $('roomBtn')
+let pressTimer = null
+let longPressed = false
+
+function calInfoText() {
+  const r = ROOMS[roomIdx]
+  const fmt = (a) => (a ? '[' + a.join(',') + ']' : '—')
+  return '调试模式（长按"换景"退出）\n'
+    + '房间 ' + (roomIdx + 1) + '/' + ROOMS.length + '  ' + r.id + '  ' + r.name + '\n'
+    + '窗   win    ' + fmt(r.win) + '\n'
+    + '灯A  lamp   ' + fmt(r.lamps[0]) + '   罩 ' + fmt(r.shades[0]) + '\n'
+    + '灯B  lamp   ' + fmt(r.lamps[1]) + '   罩 ' + fmt(r.shades[1]) + '\n'
+    + '毯   rug    ' + fmt(r.rug) + '\n'
+    + '网格：红线 10%，蓝线 50%；左上角为 (0,0)'
+}
+
+function toggleCal() {
+  const on = document.body.classList.toggle('fx-cal')
+  const info = $('calInfo')
+  if (info) info.textContent = on ? calInfoText() : ''
+  if (on) {
+    // 调试模式下强制显示所有特效层
+    document.body.classList.add('fx-snow', 'fx-lamp', 'fx-rug')
+    document.body.classList.remove('room-day')
+  }
+}
+
 if (roomBtn) {
-  roomBtn.addEventListener('click', () => {
+  roomBtn.addEventListener('pointerdown', () => {
+    longPressed = false
+    pressTimer = setTimeout(() => {
+      longPressed = true
+      toggleCal()
+    }, 600)
+  })
+  const cancel = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null } }
+  roomBtn.addEventListener('pointerup', () => {
+    cancel()
+    if (longPressed) { longPressed = false; return }
     roomIdx = (roomIdx + 1) % ROOMS.length
     try { localStorage.setItem('room:idx', String(roomIdx)) } catch { /* 忽略 */ }
     applyRoom(roomIdx)
+    if (document.body.classList.contains('fx-cal')) {
+      const info = $('calInfo'); if (info) info.textContent = calInfoText()
+    }
   })
+  roomBtn.addEventListener('pointerleave', cancel)
+  roomBtn.addEventListener('pointercancel', cancel)
 }
 applyRoom(roomIdx)
 
@@ -806,6 +877,8 @@ async function pollBotAnim() {
   if (s && s.ok) setState('待命')
   else hint.textContent = '连不上 Aurabot 的 voice-lab 模块'
 })()
+// CAL_HOOK：?cal=1 直接进调试模式
+if (location.search.indexOf('cal=1') >= 0) setTimeout(toggleCal, 400)
 </script>
 </body>
 </html>
