@@ -85,6 +85,39 @@
   body.fx-rug #fxRug { animation: rugPulse 7s ease-in-out infinite; }
   @keyframes rugPulse { 0%,100% { opacity:.12; transform:scale(1) } 50% { opacity:.55; transform:scale(1.03) } }
 
+  /* 灯罩本体闪烁（不规则，像真实灯泡） */
+  .fxShade {
+    position:absolute; pointer-events:none; border-radius:50%; z-index:5;
+    background: radial-gradient(circle, rgba(255,244,214,.95) 0%, rgba(255,214,150,.6) 42%, rgba(255,200,130,0) 72%);
+    opacity:0; mix-blend-mode:screen;
+  }
+  body.fx-lamp .fxShade { animation: shadeFlicker 3.1s steps(1,end) infinite; }
+  @keyframes shadeFlicker {
+    0%   { opacity:.35 }
+    7%   { opacity:1 }
+    11%  { opacity:.45 }
+    19%  { opacity:.95 }
+    27%  { opacity:.6 }
+    38%  { opacity:1 }
+    52%  { opacity:.4 }
+    68%  { opacity:.9 }
+    74%  { opacity:.55 }
+    88%  { opacity:.95 }
+    100% { opacity:.35 }
+  }
+
+  /* 整屋暖光层（跟着灯一起呼吸） */
+  #fxWarm {
+    position:absolute; inset:0; pointer-events:none; z-index:3;
+    background: radial-gradient(ellipse at 50% 42%, rgba(255,198,128,.26) 0%, rgba(255,188,118,.10) 45%, rgba(255,180,110,0) 72%);
+    opacity:0;
+  }
+  body.fx-lamp #fxWarm { animation: warmPulse 4.6s ease-in-out infinite; }
+  @keyframes warmPulse { 0%,100% { opacity:.2 } 50% { opacity:.8 } }
+
+  body.room-day .fxShade, body.room-day #fxWarm { display:none; }
+  body.room-day #fxSnow { display:none; }
+
   /* 特效开关按钮 */
   #fx { position:absolute; right:8px; top:42px; display:flex; gap:5px; z-index:3; }
   .fx-btn {
@@ -167,10 +200,17 @@
 <body class="fx-snow fx-lamp fx-rug">
 <div id="card">
   <div id="room">
+  <div id="fxWarm"></div>
   <div id="fxSnow"></div>
-  <div id="fxLampA" class="fxGlow" style="left:24%; top:33%; width:22%; height:22%;"></div>
-  <div id="fxLampB" class="fxGlow" style="left:55%; top:30%; width:20%; height:20%;"></div>
-  <div id="fxRug" style="left:30%; top:62%; width:34%; height:26%;"></div><div class="roomWrap"><img class="roomImg" src="room.webp" alt=""></div><div id="roomFade"></div></div>
+  <div id="fxLampA" class="fxGlow"></div>
+  <div id="fxLampB" class="fxGlow"></div>
+  <div id="fxShadeA" class="fxShade"></div>
+  <div id="fxShadeB" class="fxShade"></div>
+  <div id="fxRug"></div>
+  <div class="roomWrap"><img id="roomImg" class="roomImg" src="rooms/v2-blue-cozy.webp" alt=""></div>
+  <div id="roomFade"></div>
+</div>
+
   <div id="bar">
     <span class="dot"></span>
     <span class="title">大肥鱼 · 语音对话</span>
@@ -182,6 +222,7 @@
     <button class="fx-btn" data-fx="snow" title="窗外飘雪">❄ 雪</button>
     <button class="fx-btn" data-fx="lamp" title="台灯呼吸">💡 灯</button>
     <button class="fx-btn" data-fx="rug" title="地毯流光">✨ 毯</button>
+    <button class="fx-btn" id="roomBtn" title="换一个房间">🖼 换景</button>
   </div>
   <div id="stage">
     <video id="pet" autoplay muted playsinline loop></video>
@@ -574,6 +615,62 @@ window.addEventListener('beforeunload', () => { try { stopListen() } catch {} })
     box.appendChild(f)
   }
 })()
+
+// ---------- 房间与特效锚点 ----------
+// 每张图家具位置不同，所以各自的窗、灯、地毯位置单独配置（百分比，相对房间层）
+const ROOMS = [
+  { id: 'v1-blue-calm',    name: '蓝白·整洁', night: true,  win: [18, 8, 34, 40], lamps: [[28, 28, 24, 24], [58, 34, 22, 22]], shades: [[29, 26, 10, 9], [59, 32, 9, 8]], rug: [38, 62, 36, 26] },
+  { id: 'v2-blue-cozy',    name: '蓝白·生活感', night: true, win: [6, 4, 42, 52],  lamps: [[14, 28, 24, 24], [56, 28, 22, 22]], shades: [[15, 26, 10, 9], [57, 26, 9, 8]], rug: [36, 64, 40, 26] },
+  { id: 'v3-blue-detail',  name: '蓝白·串灯',  night: true,  win: [10, 6, 36, 42], lamps: [[70, 30, 22, 22], [26, 48, 20, 20]], shades: [[71, 28, 9, 8], [27, 46, 9, 8]], rug: [40, 66, 34, 24] },
+  { id: 'w1-warm-wood',    name: '暖木小屋',   night: true,  win: [38, 8, 34, 40], lamps: [[50, 32, 24, 24], [10, 36, 22, 22]], shades: [[51, 30, 10, 9], [11, 34, 9, 8]], rug: [30, 66, 44, 26] },
+  { id: 'n1-neon-cyber',   name: '霓虹赛博',   night: true,  win: [42, 6, 50, 50], lamps: [[54, 28, 26, 26], [74, 44, 22, 22]], shades: [[55, 26, 10, 9], [75, 42, 9, 8]], rug: [40, 68, 36, 24] },
+  { id: 'l1-bright-nordic',name: '北欧日光',   night: false, win: [44, 4, 32, 40], lamps: [],                       shades: [],                     rug: [32, 66, 40, 26] },
+]
+
+const $ = (id) => document.getElementById(id)
+let roomIdx = 0
+try {
+  const saved = Number(localStorage.getItem('room:idx'))
+  if (Number.isInteger(saved) && saved >= 0 && saved < ROOMS.length) roomIdx = saved
+} catch { /* 忽略 */ }
+
+function place(el, rect) {
+  if (!el) return
+  if (!rect) { el.style.display = 'none'; return }
+  el.style.display = ''
+  el.style.left = rect[0] + '%'
+  el.style.top = rect[1] + '%'
+  el.style.width = rect[2] + '%'
+  el.style.height = rect[3] + '%'
+}
+
+function applyRoom(i) {
+  const r = ROOMS[i]
+  if (!r) return
+  const img = $('roomImg')
+  if (img) img.src = 'rooms/' + r.id + '.webp'
+  place($('fxSnow'), r.night ? r.win : null)
+  place($('fxLampA'), r.lamps[0] || null)
+  place($('fxLampB'), r.lamps[1] || null)
+  place($('fxShadeA'), r.shades[0] || null)
+  place($('fxShadeB'), r.shades[1] || null)
+  place($('fxRug'), r.rug)
+  // 白天的房间不显示雪与暖光
+  document.body.classList.toggle('room-day', !r.night)
+  const hintEl = $('hint')
+  if (hintEl && !hintEl.dataset.busy) hintEl.textContent = '房间：' + r.name
+}
+
+// 换景
+const roomBtn = $('roomBtn')
+if (roomBtn) {
+  roomBtn.addEventListener('click', () => {
+    roomIdx = (roomIdx + 1) % ROOMS.length
+    try { localStorage.setItem('room:idx', String(roomIdx)) } catch { /* 忽略 */ }
+    applyRoom(roomIdx)
+  })
+}
+applyRoom(roomIdx)
 
 // ---------- 氛围特效开关 ----------
 const FX = ['snow', 'lamp', 'rug']
