@@ -9,24 +9,47 @@
   html, body { margin:0; height:100%; background:transparent; font:13px/1.5 "Microsoft YaHei",system-ui,sans-serif; color:var(--fg); overflow:hidden; }
   #card {
     height:100%; display:flex; flex-direction:column; border-radius:16px; overflow:hidden;
-    background:rgba(18,22,30,.92); border:1px solid rgba(255,255,255,.10);
+    border:1px solid rgba(255,255,255,.10);
     box-shadow:0 10px 30px rgba(0,0,0,.45);
+    position:relative;
+    background:linear-gradient(180deg,#070d1c 0%,#0a1326 55%,#0b1626 100%);
   }
+  /* 房间层：缓慢视差，别让画面死板 */
+  #room {
+    position:absolute; left:0; right:0; top:34px; height:340px;
+    overflow:hidden; z-index:0;
+  }
+  #room::before {
+    content:''; position:absolute; inset:-2% 0 -2% 0;
+    background:url('room-stage.svg') center top / cover no-repeat;
+    animation: roomDrift 34s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  /* 舞台底部往日志区过渡，别硬切 */
+  #room::after {
+    content:''; position:absolute; left:0; right:0; bottom:0; height:48px;
+    background:linear-gradient(180deg, rgba(8,14,26,0) 0%, rgba(8,14,26,.85) 100%);
+  }
+  @keyframes roomDrift {
+    from { transform: scale(1.02) translate3d(-0.8%, 0.4%, 0); }
+    to   { transform: scale(1.06) translate3d(0.8%, -0.6%, 0); }
+  }
+  #bar, #stage, #log, #foot { position:relative; z-index:1; }
   #bar { -webkit-app-region:drag; display:flex; align-items:center; gap:6px; padding:8px 10px; background:rgba(255,255,255,.05); }
   #bar .dot { width:8px; height:8px; border-radius:50%; background:var(--ok); }
   #bar .title { flex:1; font-size:12px; color:var(--dim); }
   #bar button { -webkit-app-region:no-drag; width:22px; height:22px; border:none; border-radius:6px; background:rgba(255,255,255,.08); color:var(--fg); cursor:pointer; }
   #bar button:hover { background:rgba(255,255,255,.18); }
 
-  #stage { position:relative; height:324px; display:flex; align-items:flex-end; justify-content:center; }
-  #pet { height:320px; width:320px; object-fit:contain; }
+  #stage { position:relative; height:340px; background:transparent; display:flex; align-items:flex-end; justify-content:center; }
+  #pet { height:260px; width:260px; transform:translateX(22px); object-fit:contain; }
   #stageFallback { position:absolute; inset:0; display:none; align-items:center; justify-content:center; font-size:52px; opacity:.5; }
   #state { position:absolute; left:10px; bottom:6px; font-size:11px; color:var(--dim); }
   #level { position:absolute; right:10px; bottom:8px; width:60px; height:4px; border-radius:2px; background:rgba(255,255,255,.12); overflow:hidden; opacity:0; transition:opacity .2s; }
   #level.on { opacity:1; }
   #level i { display:block; height:100%; width:0%; background:var(--ok); transition:width .06s linear; }
 
-  #log { flex:1; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+  #log { flex:1; overflow-y:auto; padding:14px 10px 8px; background:linear-gradient(180deg, rgba(8,14,26,0) 0%, rgba(8,14,26,.72) 14%, rgba(8,14,26,.88) 100%); display:flex; flex-direction:column; gap:6px; }
   #log::-webkit-scrollbar { width:6px; }
   #log::-webkit-scrollbar-thumb { background:rgba(255,255,255,.15); border-radius:3px; }
   .row { max-width:86%; padding:6px 9px; border-radius:10px; white-space:pre-wrap; word-break:break-word; }
@@ -34,7 +57,7 @@
   .her { align-self:flex-start; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.10); }
   .sys { align-self:center; font-size:11px; color:var(--dim); background:none; }
 
-  #foot { padding:8px 10px 10px; display:flex; flex-direction:column; gap:6px; }
+  #foot { padding:8px 10px 10px; display:flex; flex-direction:column; gap:6px; background:rgba(8,14,26,.35); }
   #ptt {
     height:42px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
     background:linear-gradient(180deg,rgba(79,140,255,.35),rgba(79,140,255,.18));
@@ -83,6 +106,7 @@
 </head>
 <body>
 <div id="card">
+  <div id="room"></div>
   <div id="bar">
     <span class="dot"></span>
     <span class="title">大肥鱼 · 语音对话</span>
