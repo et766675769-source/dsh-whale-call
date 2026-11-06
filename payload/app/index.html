@@ -150,6 +150,26 @@
   }
   body.fx-cal #calInfo { display:block; }
 
+  /* ===== 物体标注层 ===== */
+  #objLayer { position:absolute; inset:0; z-index:8; pointer-events:none; display:none; }
+  body.fx-cal #objLayer { display:block; }
+  .objBox {
+    position:absolute; border:1px solid rgba(120,255,170,.95); background:rgba(120,255,170,.10);
+    pointer-events:auto; cursor:move; box-sizing:border-box;
+  }
+  .objBox .lbl {
+    position:absolute; left:-1px; top:-15px; font:10px/1.4 ui-monospace,Consolas,monospace;
+    color:#bfffd8; background:rgba(0,0,0,.65); padding:0 4px; border-radius:3px; white-space:nowrap;
+  }
+  .objAnchor {
+    position:absolute; width:12px; height:12px; margin:-6px 0 0 -6px; border-radius:50%;
+    border:2px solid #ffd166; background:rgba(255,209,102,.30);
+    pointer-events:auto; cursor:crosshair; z-index:2;
+  }
+  .objAnchor::before, .objAnchor::after { content:''; position:absolute; background:rgba(255,209,102,.95); }
+  .objAnchor::before { left:50%; top:-5px; width:1px; height:20px; }
+  .objAnchor::after { top:50%; left:-5px; height:1px; width:20px; }
+
   /* 特效开关按钮 */
   #fx { position:absolute; right:8px; top:42px; display:flex; gap:5px; z-index:3; }
   .fx-btn {
@@ -249,6 +269,7 @@
   <div id="fxShadeB" class="fxShade"></div>
   <div id="fxRug"></div>
   <div class="roomWrap"><img id="roomImg" class="roomImg" src="rooms/v2-blue-cozy.webp" alt=""></div>
+  <div id="objLayer"></div>
   <div id="roomFade"></div>
   <div id="calGrid"></div>
   <div id="calInfo"></div>
@@ -274,6 +295,7 @@
     <button class="fx-btn" data-fx="lamp" title="台灯呼吸">💡 灯</button>
     <button class="fx-btn" data-fx="rug" title="地毯流光">✨ 毯</button>
     <button class="fx-btn" id="roomBtn" title="换一个房间">🖼 换景</button>
+    <button class="fx-btn" id="objExport" title="导出标注 JSON" style="display:none">💾 导出</button>
   </div>
   <div id="stage">
     <video id="pet" autoplay muted playsinline loop></video>
@@ -296,6 +318,7 @@
   </div>
 </div>
 
+<script src="rooms/anchors.js"></script>
 <script>
 const IDLE = ['anim-058','anim-003','anim-018','anim-101','anim-046','anim-059','anim-061','anim-021','anim-050','anim-082','anim-066','anim-091','anim-106']
 const SPEAK = ['anim-086','anim-087','anim-088','anim-076','anim-073']
@@ -752,8 +775,112 @@ function applyRoom(i) {
   place($('fxShadeB'), curAnchors.shade1)
   place($('fxRug'), curAnchors.rug)
   document.body.classList.toggle('room-day', !r.night)
+  if (typeof renderObjects === 'function') renderObjects()
   const hintEl = $('hint')
   if (hintEl && !hintEl.dataset.busy) hintEl.textContent = '房间：' + r.name
+}
+
+// ---------- 物体标注（调试模式） ----------
+const OBJ_EDITS = {}   // roomId -> { objKey: {rect, anchor} }
+
+function objDataOf(roomId) {
+  const base = (window.ROOM_ANCHORS && window.ROOM_ANCHORS[roomId]) || { objects: {} }
+  const merged = {}
+  for (const [k, v] of Object.entries(base.objects || {})) {
+    merged[k] = { rect: (v.rect || [0, 0, 10, 10]).slice(), anchor: (v.anchor || [5, 5]).slice() }
+  }
+  const edits = OBJ_EDITS[roomId] || {}
+  for (const [k, v] of Object.entries(edits)) merged[k] = v
+  return merged
+}
+
+function renderObjects() {
+  const layer = $('objLayer')
+  if (!layer) return
+  layer.innerHTML = ''
+  const r = ROOMS[roomIdx]
+  const objs = objDataOf(r.id)
+  for (const [key, o] of Object.entries(objs)) {
+    const box = document.createElement('div')
+    box.className = 'objBox'
+    box.style.left = o.rect[0] + '%'
+    box.style.top = o.rect[1] + '%'
+    box.style.width = o.rect[2] + '%'
+    box.style.height = o.rect[3] + '%'
+    const lbl = document.createElement('span')
+    lbl.className = 'lbl'
+    lbl.textContent = key
+    box.appendChild(lbl)
+
+    const dot = document.createElement('div')
+    dot.className = 'objAnchor'
+    dot.style.left = o.anchor[0] + '%'
+    dot.style.top = o.anchor[1] + '%'
+    dot.title = key + ' 落脚点'
+
+    bindObjDrag(box, dot, r.id, key, o, 'rect')
+    bindObjDrag(dot, null, r.id, key, o, 'anchor')
+    layer.appendChild(box)
+    layer.appendChild(dot)
+  }
+}
+
+function bindObjDrag(el, dot, roomId, key, o, mode) {
+  el.addEventListener('pointerdown', (e) => {
+    if (!document.body.classList.contains('fx-cal')) return
+    e.preventDefault(); e.stopPropagation()
+    const room = $('room')
+    const rr = room.getBoundingClientRect()
+    const sx = e.clientX, sy = e.clientY
+    const origRect = o.rect.slice()
+    const origAnchor = o.anchor.slice()
+    const move = (ev) => {
+      const dx = (ev.clientX - sx) / rr.width * 100
+      const dy = (ev.clientY - sy) / rr.height * 100
+      if (mode === 'anchor') {
+        o.anchor[0] = +(origAnchor[0] + dx).toFixed(1)
+        o.anchor[1] = +(origAnchor[1] + dy).toFixed(1)
+        if (dot) { dot.style.left = o.anchor[0] + '%'; dot.style.top = o.anchor[1] + '%' }
+      } else if (ev.shiftKey) {
+        o.rect[2] = Math.max(2, +(origRect[2] + dx).toFixed(1))
+        o.rect[3] = Math.max(2, +(origRect[3] + dy).toFixed(1))
+        el.style.width = o.rect[2] + '%'; el.style.height = o.rect[3] + '%'
+        if (dot) { dot.style.left = o.anchor[0] + '%'; dot.style.top = o.anchor[1] + '%' }
+      } else {
+        o.rect[0] = +(origRect[0] + dx).toFixed(1)
+        o.rect[1] = +(origRect[1] + dy).toFixed(1)
+        o.anchor[0] = +(origAnchor[0] + dx).toFixed(1)
+        o.anchor[1] = +(origAnchor[1] + dy).toFixed(1)
+        el.style.left = o.rect[0] + '%'; el.style.top = o.rect[1] + '%'
+        if (dot) { dot.style.left = o.anchor[0] + '%'; dot.style.top = o.anchor[1] + '%' }
+      }
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      OBJ_EDITS[roomId] = OBJ_EDITS[roomId] || {}
+      OBJ_EDITS[roomId][key] = o
+      const info = $('calInfo')
+      if (info) info.textContent = calInfoText()
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  })
+}
+
+// 导出当前房间的标注
+const objExportBtn = $('objExport')
+if (objExportBtn) {
+  objExportBtn.addEventListener('click', async () => {
+    const r = ROOMS[roomIdx]
+    const payload = { id: r.id, objects: objDataOf(r.id) }
+    try {
+      const res = await window.bridge.saveAnchors(payload)
+      hint.textContent = res && res.ok ? '已导出到 ' + res.file : '导出失败：' + ((res && res.message) || '未知')
+    } catch (err) {
+      hint.textContent = '导出失败：' + ((err && err.message) || err)
+    }
+  })
 }
 
 // ---------- 拖动调整（调试模式） ----------
@@ -849,6 +976,8 @@ function calInfoText() {
 
 function toggleCal() {
   const on = document.body.classList.toggle('fx-cal')
+  const exp = $('objExport'); if (exp) exp.style.display = on ? '' : 'none'
+  if (on && typeof renderObjects === 'function') renderObjects()
   const info = $('calInfo')
   if (info) info.textContent = on ? calInfoText() : ''
   if (on) {

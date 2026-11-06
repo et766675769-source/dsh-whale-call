@@ -177,6 +177,18 @@ ipcMain.handle('animPoll', async () => {
   }
 })
 
+/** 把标注数据写到 app 目录下的 anchors-export.json，方便取出来 */
+ipcMain.handle('saveAnchors', async (_e, data) => {
+  try {
+    const file = path.join(app.getPath('userData'), 'anchors-export.json')
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, typeof data === 'string' ? data : JSON.stringify(data, null, 2), 'utf8')
+    return { ok: true, file }
+  } catch (error) {
+    return { ok: false, message: String((error && error.message) || error) }
+  }
+})
+
 ipcMain.handle('topState', () => (win && !win.isDestroyed() ? win.isAlwaysOnTop() : false))
 
 ipcMain.handle('win', (_e, action) => {
