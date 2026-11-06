@@ -157,6 +157,9 @@
     position:absolute; border:1px solid rgba(120,255,170,.95); background:rgba(120,255,170,.10);
     pointer-events:auto; cursor:move; box-sizing:border-box;
   }
+  .objBox.sel { border-color:#ffe14d; box-shadow:0 0 0 1px #ffe14d inset; }
+  .objBox.sel .lbl { color:#fff3b0; background:rgba(120,90,0,.8); }
+  .objAnchor.sel { border-color:#ff5c5c; background:rgba(255,92,92,.4); }
   .objBox .lbl {
     position:absolute; left:-1px; top:-15px; font:10px/1.4 ui-monospace,Consolas,monospace;
     color:#bfffd8; background:rgba(0,0,0,.65); padding:0 4px; border-radius:3px; white-space:nowrap;
@@ -818,6 +821,8 @@ function renderObjects() {
     dot.style.top = o.anchor[1] + '%'
     dot.title = key + ' 落脚点'
 
+    box.addEventListener('pointerdown', (e) => { if (e.button === 0) selectObj(key, 'rect', box, dot) })
+    dot.addEventListener('pointerdown', (e) => { if (e.button === 0) selectObj(key, 'anchor', box, dot) })
     bindObjDrag(box, dot, r.id, key, o, 'rect')
     bindObjDrag(dot, null, r.id, key, o, 'anchor')
     layer.appendChild(box)
@@ -866,6 +871,40 @@ function bindObjDrag(el, dot, roomId, key, o, mode) {
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
   })
+}
+
+// 选中与键盘微调
+let selObj = null      // { key, part: 'rect' | 'anchor' }
+let selEl = null
+
+function selectObj(key, part, boxEl, dotEl) {
+  selObj = { key, part }
+  document.querySelectorAll('.objBox.sel, .objAnchor.sel').forEach((n) => n.classList.remove('sel'))
+  if (part === 'anchor') dotEl && dotEl.classList.add('sel')
+  else boxEl && boxEl.classList.add('sel')
+  const info = $('calInfo')
+  if (info) info.textContent = calInfoText()
+}
+
+function nudgeSelected(dx, dy) {
+  if (!selObj) return false
+  const r = ROOMS[roomIdx]
+  const objs = objDataOf(r.id)
+  const o = objs[selObj.key]
+  if (!o) return false
+  const arr = selObj.part === 'anchor' ? o.anchor : o.rect
+  const i0 = selObj.part === 'anchor' ? 0 : 0
+  arr[0] = +(arr[0] + dx).toFixed(2)
+  arr[1] = +(arr[1] + dy).toFixed(2)
+  OBJ_EDITS[r.id] = OBJ_EDITS[r.id] || {}
+  OBJ_EDITS[r.id][selObj.key] = o
+  renderObjects()
+  // 重新高亮
+  const again = [...document.querySelectorAll('.objBox')].find((b) => b.querySelector('.lbl') && b.querySelector('.lbl').textContent === selObj.key)
+  if (again) again.classList.add('sel')
+  const info = $('calInfo')
+  if (info) info.textContent = calInfoText()
+  return true
 }
 
 // 导出当前房间的标注
@@ -971,7 +1010,8 @@ function calInfoText() {
     + '灯A  ' + fmt(a.lamp0) + ' 罩 ' + fmt(a.shade0) + '\n'
     + '灯B  ' + fmt(a.lamp1) + ' 罩 ' + fmt(a.shade1) + '\n'
     + '毯   ' + fmt(a.rug) + '\n'
-    + '直接拖动彩框可移动 · Shift+拖动改大小 · 松手自动保存'
+    + (selObj ? '选中：' + selObj.key + '（' + (selObj.part === 'anchor' ? '落脚点' : '物体框') + '）\n' : '')
+    + '拖动改位置 · Shift+拖动改大小 · 方向键微调(Shift更细) · Tab 切换 · Del 删除'
 }
 
 function toggleCal() {
@@ -1149,6 +1189,41 @@ async function pollBotAnim() {
 // RESET_HOTKEY：调试模式按 R 重置本房间锚点
 window.addEventListener('keydown', (e) => {
   if (!document.body.classList.contains('fx-cal')) return
+
+  // 方向键微调选中的物体（Shift 更细）
+  const step = e.shiftKey ? 0.2 : 1
+  const arrows = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }
+  if (arrows[e.key] && nudgeSelected(arrows[e.key][0], arrows[e.key][1])) {
+    e.preventDefault()
+    return
+  }
+  // Tab 循环选择
+  if (e.key === 'Tab') {
+    const r = ROOMS[roomIdx]
+    const keys = Object.keys(objDataOf(r.id))
+    if (!keys.length) return
+    e.preventDefault()
+    const cur = selObj ? keys.indexOf(selObj.key) : -1
+    const next = keys[(cur + 1) % keys.length]
+    const box = [...document.querySelectorAll('.objBox')].find((b) => b.querySelector('.lbl') && b.querySelector('.lbl').textContent === next)
+    const dot = [...document.querySelectorAll('.objAnchor')].find((d) => d.title === next + ' 落脚点')
+    selectObj(next, 'rect', box, dot)
+    return
+  }
+  // Delete 删除选中物体
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selObj) {
+    const r = ROOMS[roomIdx]
+    const objs = objDataOf(r.id)
+    delete objs[selObj.key]
+    OBJ_EDITS[r.id] = objs
+    selObj = null
+    renderObjects()
+    const info = $('calInfo')
+    if (info) info.textContent = calInfoText()
+    e.preventDefault()
+    return
+  }
+
   if (e.key !== 'r' && e.key !== 'R') return
   const r = ROOMS[roomIdx]
   try { localStorage.removeItem('anchors:' + r.id) } catch { /* 忽略 */ }
