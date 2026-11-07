@@ -230,3 +230,16 @@ ipcMain.handle('dishes', async () => {
     return { ok: false, message: String((error && error.message) || error) }
   }
 })
+
+/** 心情值：读 Aurabot 的 mood.json（模块没有对外路由，直接读文件最省事） */
+ipcMain.handle('mood', async () => {
+  try {
+    const home = process.env.DSH_HOME
+      || path.join(process.env.APPDATA || '', 'Deepseek-Harness-Desktop', 'dsh-home')
+    const file = path.join(home, 'plugins-data', 'aurabot', 'mood.json')
+    const j = JSON.parse(fs.readFileSync(file, 'utf8'))
+    return { ok: true, value: Number(j.value) || 0, reason: String(j.reason || ''), at: Number(j.at) || 0 }
+  } catch (error) {
+    return { ok: false, message: String((error && error.message) || error) }
+  }
+})

@@ -1476,6 +1476,34 @@ feedBtn.onclick = () => {
   else openFeed()
 }
 feedPanel.querySelector('#fpClose').onclick = closeFeed
+
+// ---------- 待命行实时心情值 ----------
+// 包装 setState：状态文字后面永远跟着「· 心情 N」，N 由 mood.json 每 3 秒轮询。
+let moodVal = null
+let baseState = '待命'
+const origSetState = setState
+setState = function (t) {
+  baseState = t
+  origSetState(moodVal == null ? t : t + ' · 心情 ' + moodVal)
+}
+
+async function refreshMood() {
+  try {
+    const m = await window.bridge.mood()
+    if (m && m.ok && typeof m.value === 'number') {
+      if (m.value !== moodVal) {
+        moodVal = m.value
+        setState(baseState)
+      }
+    } else if (moodVal !== null) {
+      moodVal = null
+      setState(baseState)
+    }
+  } catch { /* 读不到就维持原状态 */ }
+}
+
+refreshMood()
+setInterval(refreshMood, 3000)
 </script>
 </body>
 </html>
