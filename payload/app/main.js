@@ -200,3 +200,33 @@ ipcMain.handle('win', (_e, action) => {
 })
 
 ipcMain.handle('bounds', () => (win && !win.isDestroyed() ? win.getBounds() : null))
+
+/**
+ * 菜谱清单：116 道菜的名字 + 96px 缩略图（Python 侧已压平 alpha 的 JPEG）。
+ * 「投喂」面板用它渲染网格；不走 file://（跨目录会被拦），也不在 Node 里转码。
+ */
+const thumbCache = new Map()
+ipcMain.handle('dishes', async () => {
+  try {
+    const menuFile = process.env.WHALE_MENU
+      || 'C:\\Users\\ET\\Documents\\Whale Isle\\whale-menu-all.json'
+    const thumbDir = process.env.WHALE_THUMB_DIR
+      || 'C:\\Users\\ET\\Documents\\Whale Isle\\output\\thumbs'
+    const recs = JSON.parse(fs.readFileSync(menuFile, 'utf8'))
+    const items = recs.map((r) => {
+      let img = ''
+      try {
+        let b64 = thumbCache.get(r.object_id)
+        if (!b64) {
+          b64 = fs.readFileSync(path.join(thumbDir, `${r.object_id}.jpg`)).toString('base64')
+          thumbCache.set(r.object_id, b64)
+        }
+        img = 'data:image/jpeg;base64,' + b64
+      } catch { /* 单张缺就留空 */ }
+      return { id: r.object_id, name: r.dish_name, bucket: r.bucket || '', img }
+    })
+    return { ok: true, items }
+  } catch (error) {
+    return { ok: false, message: String((error && error.message) || error) }
+  }
+})

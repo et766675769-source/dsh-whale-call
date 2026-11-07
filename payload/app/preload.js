@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld('bridge', {
   topState: () => ipcRenderer.invoke('topState'),
   saveAnchors: (data) => ipcRenderer.invoke('saveAnchors', data),
   bounds: () => ipcRenderer.invoke('bounds'),
+  dishes: () => ipcRenderer.invoke('dishes'),
 })

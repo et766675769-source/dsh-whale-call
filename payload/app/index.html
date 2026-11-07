@@ -1045,10 +1045,116 @@ if (roomBtn) {
     if (document.body.classList.contains('fx-cal')) {
       const info = $('calInfo'); if (info) info.textContent = calInfoText()
     }
+    // 换景后把「场景 + 物体坐标」告诉她，让她知道人现在挪到哪儿了
+    notifyRoomChange(roomIdx)
   })
   roomBtn.addEventListener('pointerleave', cancel)
   roomBtn.addEventListener('pointercancel', cancel)
 }
+
+/**
+ * 换景通知：把当前场景名、id、固定陈设与可交互物的坐标发给她。
+ * 坐标都是百分比（[x,y,w,h] / 锚点 [x,y]），和 anchors 里一致，避免单位歧义。
+ */
+async function notifyRoomChange(i) {
+  const r = ROOMS[i]
+  if (!r) return
+  const a = anchorsOf(r) || {}
+  const fixtures = []
+  if (Array.isArray(r.win)) fixtures.push('窗[' + r.win.join(',') + ']')
+  if (Array.isArray(r.rug)) fixtures.push('地毯[' + r.rug.join(',') + ']')
+  ;(r.lamps || []).forEach((l, k) => fixtures.push('台灯' + (k + 1) + '[' + l.join(',') + ']'))
+  ;(r.shades || []).forEach((l, k) => fixtures.push('灯罩' + (k + 1) + '[' + l.join(',') + ']'))
+  const objs = Object.entries(a.objects || {}).map(([k, v]) => {
+    const rect = (v.rect || []).join(',')
+    const anchor = (v.anchor || []).join(',')
+    return `${k}(rect[${rect}] anchor[${anchor}])`
+  })
+  const text = '（换景）现在换到「' + r.name + '」（id=' + r.id + '，' + (r.night ? '夜间' : '白天') + '）。' +
+    '坐标均为百分比，[x,y,w,h]＝左上角与宽高，anchor＝[x,y] 锚点。' +
+    (fixtures.length ? '固定陈设：' + fixtures.join('；') + '。' : '') +
+    (objs.length ? '可交互物：' + objs.join('；') + '。' : '这个房间没有标注可交互物。')
+  try {
+    const res = await window.bridge.turn({ text })
+    if (res && res.ok) {
+      if (res.heard) addRow('me', res.heard)
+      if (res.reply) addRow('her', res.reply)
+      if (res.voice && res.voice.data && !busy) playVoice(res.voice.data)
+    }
+  } catch { /* 发不出去就算了，别打断换景 */ }
+}
+
+// ---------- 形象可拖动 ----------
+;(function makePetDraggable() {
+  const stage = $('stage')
+  const pet = $('pet')
+  if (!stage || !pet) return
+  const KEY = 'pet-pos-v1'
+  let dragging = false
+  let offX = 0
+  let offY = 0
+
+  const clamp = (v, max) => Math.min(Math.max(0, v), Math.max(0, max))
+
+  function place(x, y) {
+    pet.style.position = 'absolute'
+    pet.style.left = Math.round(x) + 'px'
+    pet.style.top = Math.round(y) + 'px'
+    pet.style.margin = '0'
+    pet.style.transform = 'none'
+  }
+
+  function restore() {
+    try {
+      const p = JSON.parse(localStorage.getItem(KEY) || 'null')
+      if (!p) return
+      const sr = stage.getBoundingClientRect()
+      place(clamp(p.x, sr.width - pet.clientWidth), clamp(p.y, sr.height - pet.clientHeight))
+    } catch { /* 没有记录就用默认摆位 */ }
+  }
+
+  pet.style.cursor = 'grab'
+  pet.style.touchAction = 'none'
+
+  pet.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return
+    // 阻断冒泡：否则拖形象会顺手触发房间/调试面板的手势
+    e.stopPropagation()
+    const pr = pet.getBoundingClientRect()
+    offX = e.clientX - pr.left
+    offY = e.clientY - pr.top
+    dragging = true
+    pet.style.cursor = 'grabbing'
+    try { pet.setPointerCapture(e.pointerId) } catch { /* 忽略 */ }
+    e.preventDefault()
+  })
+
+  pet.addEventListener('pointermove', (e) => {
+    if (!dragging) return
+    e.stopPropagation()
+    const sr = stage.getBoundingClientRect()
+    place(clamp(e.clientX - sr.left - offX, sr.width - pet.clientWidth),
+      clamp(e.clientY - sr.top - offY, sr.height - pet.clientHeight))
+  })
+
+  const end = (e) => {
+    if (!dragging) return
+    if (e && e.stopPropagation) e.stopPropagation()
+    dragging = false
+    pet.style.cursor = 'grab'
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        x: parseFloat(pet.style.left) || 0,
+        y: parseFloat(pet.style.top) || 0,
+      }))
+    } catch { /* 忽略 */ }
+  }
+  pet.addEventListener('pointerup', end)
+  pet.addEventListener('pointercancel', end)
+  pet.addEventListener('click', (e) => e.stopPropagation())
+
+  restore()
+})()
 applyRoom(roomIdx)
 bindDrag()
 
@@ -1235,6 +1341,141 @@ window.addEventListener('keydown', (e) => {
 
 // CAL_HOOK：?cal=1 直接进调试模式
 if (location.search.indexOf('cal=1') >= 0) setTimeout(toggleCal, 400)
+
+// ---------- 投喂面板：点一道菜直接喂（数据由主进程读，不经过网络/拖拽） ----------
+async function feed(dish) {
+  if (!dish) return
+  if (busy) { hint.textContent = '她还在嚼上一口，等会儿再喂'; return }
+  busy = true
+  ptt.disabled = true
+  setState('被投喂了…')
+  hint.textContent = '投喂「' + dish + '」'
+  addRow('me', '🍽 投喂：' + dish)
+  let r = null
+  try {
+    r = await window.bridge.turn({ text: '（投喂）' + dish })
+  } catch (error) {
+    r = { ok: false, message: String((error && error.message) || error) }
+  }
+  busy = false
+  ptt.disabled = listening
+  if (!r || !r.ok) {
+    setState('出错了')
+    hint.textContent = (r && r.message) || '失败'
+    addRow('sys', '⚠ ' + ((r && r.message) || '失败'))
+    return
+  }
+  if (r.heard) addRow('me', r.heard)
+  if (r.reply) addRow('her', r.reply)
+  setState(listening ? '聆听中' : '待命')
+  if (r.voice && r.voice.data) playVoice(r.voice.data)
+  else playAnim(SPEAK)
+}
+
+const feedBtn = document.createElement('button')
+feedBtn.id = 'feedBtn'
+feedBtn.type = 'button'
+feedBtn.title = '投喂一道菜'
+feedBtn.textContent = '投喂'
+feedBtn.style.cssText = 'position:fixed;left:8px;bottom:96px;z-index:1200;width:auto;' +
+  'padding:0 10px;height:28px;border-radius:14px;border:1px solid rgba(255,255,255,.22);' +
+  'background:rgba(18,22,30,.88);color:#e8e8e8;font-size:12px;line-height:1;cursor:pointer'
+document.body.appendChild(feedBtn)
+
+const feedPanel = document.createElement('div')
+feedPanel.id = 'feedPanel'
+feedPanel.style.cssText = 'position:fixed;inset:0;z-index:1300;display:none;flex-direction:column;' +
+  'background:rgba(9,11,16,.97)'
+feedPanel.innerHTML =
+  '<div style="display:flex;align-items:center;gap:8px;padding:7px 9px;font-size:12px;color:#cfd3d8;' +
+  'border-bottom:1px solid rgba(255,255,255,.1)"><span style="flex:1">投喂哪一道？</span>' +
+  '<button id="fpClose" type="button" style="width:24px;height:24px;border-radius:50%;' +
+  'border:1px solid rgba(255,255,255,.18);background:transparent;color:#cfd3d8;cursor:pointer">✕</button></div>' +
+  '<div id="fpChips" style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 9px 2px"></div>' +
+  '<div id="fpGrid" style="flex:1;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;padding:7px;align-content:flex-start"></div>'
+document.body.appendChild(feedPanel)
+
+const fpGrid = feedPanel.querySelector('#fpGrid')
+const closeFeed = () => { feedPanel.style.display = 'none' }
+let feedLoaded = false
+let feedItems = []
+let feedBucket = '全部'
+
+const BUCKET_ORDER = ['全部', '大米饭', '中餐', '西餐', '饮品\\甜品']
+
+function renderFeedChips() {
+  const bar = feedPanel.querySelector('#fpChips')
+  bar.innerHTML = ''
+  BUCKET_ORDER.forEach((b) => {
+    const n = b === '全部' ? feedItems.length : feedItems.filter((x) => x.bucket === b).length
+    if (b !== '全部' && n === 0) return
+    const chip = document.createElement('button')
+    chip.type = 'button'
+    chip.textContent = b + ' ' + n
+    chip.style.cssText = 'font:inherit;font-size:11px;padding:3px 9px;border-radius:999px;cursor:pointer;' +
+      'border:1px solid rgba(255,255,255,.22);' +
+      (b === feedBucket ? 'background:#4a8dc7;color:#fff;border-color:transparent'
+        : 'background:transparent;color:#9aa0a6')
+    chip.onclick = () => { feedBucket = b; renderFeedChips(); renderFeedGrid() }
+    bar.appendChild(chip)
+  })
+}
+
+function renderFeedGrid() {
+  fpGrid.innerHTML = ''
+  const list = feedBucket === '全部' ? feedItems : feedItems.filter((x) => x.bucket === feedBucket)
+  if (!list.length) {
+    fpGrid.textContent = '这个分类下没有菜。'
+    return
+  }
+  list.forEach((it) => {
+    const card = document.createElement('div')
+    card.setAttribute('role', 'button')
+    card.tabIndex = 0
+    card.style.cssText = 'display:flex;flex-direction:column;gap:3px;padding:4px;box-sizing:border-box;' +
+      'flex:0 0 96px;width:96px;height:120px;min-height:120px;max-height:120px;border-radius:10px;' +
+      'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);cursor:pointer;overflow:hidden'
+    const img = document.createElement('img')
+    img.alt = it.name
+    img.src = it.img || ''
+    img.style.cssText = 'display:block;width:100%;height:88px;object-fit:contain;border-radius:6px;background:#0b0e14'
+    const nm = document.createElement('span')
+    nm.textContent = it.name
+    nm.style.cssText = 'display:block;font-size:11px;line-height:1.25;color:#cfd3d8;text-align:left;word-break:break-all'
+    card.appendChild(img)
+    card.appendChild(nm)
+    const go = () => { closeFeed(); feed(it.name) }
+    card.onclick = go
+    card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go() } }
+    fpGrid.appendChild(card)
+  })
+}
+
+async function openFeed() {
+  feedPanel.style.display = 'flex'
+  if (feedLoaded) return
+  fpGrid.textContent = '正在读菜谱…'
+  let r = null
+  try {
+    r = await window.bridge.dishes()
+  } catch (error) {
+    r = { ok: false, message: String((error && error.message) || error) }
+  }
+  if (!r || !r.ok) {
+    fpGrid.textContent = '读菜谱失败：' + ((r && r.message) || '未知')
+    return
+  }
+  feedItems = r.items || []
+  feedLoaded = true
+  renderFeedChips()
+  renderFeedGrid()
+}
+
+feedBtn.onclick = () => {
+  if (feedPanel.style.display === 'flex') closeFeed()
+  else openFeed()
+}
+feedPanel.querySelector('#fpClose').onclick = closeFeed
 </script>
 </body>
 </html>
