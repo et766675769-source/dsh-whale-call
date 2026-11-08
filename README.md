@@ -88,6 +88,7 @@ dsh plugin add dsh-whale-call --profile web
 - 116 道菜，每张卡片显示 96px 缩略图 + 菜名；
 - 顶部胶囊做分类筛选：`全部 / 大米饭 / 中餐 / 西餐 / 饮品·甜品`（带数量）；
 - 点一道菜就发一轮 `（投喂）菜名` 给她，她按「被喂了什么」回应并出声；
+- **投喂会写进长期记忆**：每次投喂后调用 Aurabot 的 `/aurabot/api/memory/add`，记下「老爹在语音小窗投喂了「菜名」」。所以她之后在 **QQ 那边聊天时也记得**这顿饭（记忆检索里能搜到）；记忆模块关着时自动跳过，不报错。
 - 数据由主进程读本地文件（`whale-menu-all.json` + `output/thumbs/*.jpg`）后以 base64 交给页面，**不走网络、不走 file://**，所以面板里没有跨域/沙箱问题。
 
 **🖼 换景通知** —— 点「换景」切换房间后，会自动把当前场景告诉她：
@@ -179,6 +180,31 @@ MIT
 ---
 
 ## 维护者：改完代码怎么发新版
+
+### ⚠️ 改小窗代码的正确路径（很容易踩）
+
+插件**每次启动都会用安装包里的 `payload/` 覆盖运行目录**（`lib/index.js` 里 `sameText` 不同就 `copyFileSync`）。所以：
+
+| 只改了… | 重启后 |
+|---|---|
+| `modules-data/voice-lab/app/*`（运行目录） | ❌ 被安装包的旧 payload 盖回去 |
+| `F:\Aurabot\dsh-whale-call\payload/*`（仓库） | ❌ 仓库变了，但装的是 npm 包，部署仍用旧 payload |
+| **`node_modules/dsh-whale-call/payload/*`（安装包）** | ✅ 启动时原样投放，改动保留 |
+
+正确顺序：
+
+1. 改仓库 `F:\Aurabot\dsh-whale-call`
+2. 同步进安装包：
+   ```powershell
+   $pkg  = "$env:DSH_HOME\profiles\web\node_modules\dsh-whale-call"
+   $repo = "F:\Aurabot\dsh-whale-call"
+   Copy-Item "$repo\payload\app\*" "$pkg\payload\app" -Recurse -Force
+   Copy-Item "$repo\payload\module\index.mjs" "$pkg\payload\module\index.mjs" -Force
+   ```
+3. 投放 + 重启：`POST /aurabot/api/modules/reload`，再 `POST /aurabot/api/ext/voice-lab/window/stop` + `/window/start`
+4. 升级版本、提交、推送
+
+> 症状对照：分类/置顶按钮/心情条/房间布局「重启后消失」= 安装包 payload 是旧版，不是代码丢了。
 
 1. 改代码，然后升 `package.json` 的 `version`（已发布的版本号不能重复用）
 2. 提交并推送：

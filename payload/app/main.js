@@ -243,3 +243,17 @@ ipcMain.handle('mood', async () => {
     return { ok: false, message: String((error && error.message) || error) }
   }
 })
+/** 鍐欎竴鏉￠暱鏈熻蹇嗭紙鎶曞杺銆佹崲鏅繖绫讳簨浠讹級锛岃濂瑰湪 QQ 閭ｈ竟涔熻寰?*/
+ipcMain.handle('remember', async (_e, payload) => {
+  try {
+    const r = await fetch(`${BASE}/aurabot/api/memory/add`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+      signal: AbortSignal.timeout(8000),
+    })
+    return await r.json()
+  } catch (error) {
+    return { ok: false, message: String((error && error.message) || error) }
+  }
+})

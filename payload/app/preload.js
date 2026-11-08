@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('bridge', {
   saveAnchors: (data) => ipcRenderer.invoke('saveAnchors', data),
   bounds: () => ipcRenderer.invoke('bounds'),
   dishes: () => ipcRenderer.invoke('dishes'),
+  remember: (p) => ipcRenderer.invoke('remember', p),
   mood: () => ipcRenderer.invoke('mood'),
 })

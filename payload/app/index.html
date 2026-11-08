@@ -1366,6 +1366,15 @@ async function feed(dish) {
     return
   }
   if (r.heard) addRow('me', r.heard)
+  // 记进长期记忆：这样她在 QQ 那边聊天时也知道自己被投喂了什么
+  try {
+    window.bridge.remember({
+      text: '老爹在语音小窗投喂了「' + dish + '」',
+      aboutName: '老爹',
+      importance: 0.55,
+      tags: ['投喂'],
+    })
+  } catch { /* 记忆模块关着就算了 */ }
   if (r.reply) addRow('her', r.reply)
   setState(listening ? '聆听中' : '待命')
   if (r.voice && r.voice.data) playVoice(r.voice.data)
