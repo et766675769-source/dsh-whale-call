@@ -199,7 +199,7 @@
   #bar button#btnTop:hover { color:#ffffff; }
 
   #stage { position:relative; height:340px; background:transparent; display:flex; align-items:flex-end; justify-content:center; }
-  #pet { height:260px; width:260px; transform:translateX(22px); object-fit:contain; }
+  #pet { height:260px; width:260px; transform:translateX(22px); object-fit:contain; transition: left .65s cubic-bezier(.2,.8,.3,1), top .65s cubic-bezier(.2,.8,.3,1); }
   #stageFallback { position:absolute; inset:0; display:none; align-items:center; justify-content:center; font-size:52px; opacity:.5; }
   #state { position:absolute; left:10px; bottom:6px; font-size:11px; color:var(--dim); }
   #level { position:absolute; right:10px; bottom:8px; width:60px; height:4px; border-radius:2px; background:rgba(255,255,255,.12); overflow:hidden; opacity:0; transition:opacity .2s; }
@@ -922,6 +922,60 @@ if (objExportBtn) {
   })
 }
 
+// ---------- 角色走位（按标注的 anchor） ----------
+/**
+ * 把角色移动到某个物体的落脚点。
+ * anchor 是百分比坐标，换算成相对舞台中心的像素位移；
+ * 越靠下（房间前部）稍微放大一点，做近大远小。
+ */
+function moveToAnchor(key) {
+  const r = ROOMS[roomIdx]
+  const objs = objDataOf(r.id)
+  const o = objs[key]
+  if (!o) { hint.textContent = '没有这个物体：' + key; return false }
+  const pet = $('pet')
+  const stage = $('stage')
+  if (!pet || !stage) return false
+  const w = stage.clientWidth || 340
+  const hgt = stage.clientHeight || 340
+  const ax = o.anchor[0]
+  const ay = o.anchor[1]
+  // 角色是可拖动的绝对定位元素（拖动逻辑会把 transform 重置成 none），
+  // 所以走位也走 left/top：脚底落在 anchor 上，水平居中于 anchor。
+  const pw = pet.offsetWidth || 260
+  const ph = pet.offsetHeight || 260
+  const left = (ax / 100) * w - pw / 2
+  const top = (ay / 100) * hgt - ph
+  pet.style.position = 'absolute'
+  pet.style.transform = 'none'
+  pet.style.margin = '0'
+  pet.style.left = Math.max(-60, Math.min(w - 40, left)).toFixed(1) + 'px'
+  pet.style.top = Math.max(-20, Math.min(hgt - 40, top)).toFixed(1) + 'px'
+  // 近大远小：越靠下越大一点
+  const scale = Math.max(0.86, Math.min(1.06, 0.9 + (ay - 60) / 260))
+  pet.style.zoom = ''
+  pet.style.width = Math.round(pw * scale) + 'px'
+  pet.style.height = Math.round(ph * scale) + 'px'
+  hint.textContent = '走到「' + key + '」'
+  return true
+}
+
+// 双击物体框 = 走过去
+;(function () {
+  const layer = $('objLayer')
+  if (!layer) return
+  layer.addEventListener('dblclick', (e) => {
+    const box = e.target.closest && e.target.closest('.objBox')
+    const lbl = box && box.querySelector('.lbl')
+    if (lbl) moveToAnchor(lbl.textContent)
+  })
+})()
+
+// 给模块用的入口（后续 whale_walk 工具会调）
+window.__voiceLab = window.__voiceLab || {}
+window.__voiceLab.moveToAnchor = moveToAnchor
+window.__voiceLab.getObjects = () => objDataOf(ROOMS[roomIdx].id)
+
 // ---------- 拖动调整（调试模式） ----------
 const DRAG_BOXES = [
   ['fxSnow', 'win'], ['fxLampA', 'lamp0'], ['fxLampB', 'lamp1'],
@@ -1271,6 +1325,12 @@ for (const node of [pet, document.getElementById('stage')]) {
 async function pollBotAnim() {
   try {
     const r = await window.bridge.animPoll()
+    // 她自己走过去：后端 whale_walk 工具把目标塞进同一条轮询里
+    if (r && r.ok && r.walk) {
+      const target = r.walk.key || r.walk
+      const moved = moveToAnchor(target)
+      if (moved) setState('走过去')
+    }
     if (r && r.ok && r.anim && r.anim.id) {
       const name = r.anim.name || r.anim.id
       hint.textContent = '她换了个动作：' + name
@@ -1338,6 +1398,20 @@ window.addEventListener('keydown', (e) => {
   const info = $('calInfo')
   if (info) info.textContent = calInfoText()
 })
+
+// GO_HOOK：?go=<key> 加载后走到该物体
+setTimeout(() => {
+  const m = location.search.match(/[?&]go=([a-z0-9]+)/i)
+  if (m) moveToAnchor(m[1])
+}, 900)
+
+// ROOM_FORCE：?room=<id> 直接打开指定房间
+;(function () {
+  const m = location.search.match(/[?&]room=([a-z0-9-]+)/i)
+  if (!m) return
+  const idx = ROOMS.findIndex((r) => r.id === m[1])
+  if (idx >= 0) { roomIdx = idx; applyRoom(idx); bindDrag() }
+})()
 
 // CAL_HOOK：?cal=1 直接进调试模式
 if (location.search.indexOf('cal=1') >= 0) setTimeout(toggleCal, 400)

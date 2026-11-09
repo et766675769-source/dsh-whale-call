@@ -5,13 +5,13 @@
 window.ROOM_ANCHORS = {
   'v2-blue-cozy': {
     objects: {
-      window: { rect: [16, 5, 33, 36], anchor: [32, 40] },
-      bed: { rect: [10, 36, 48, 32], anchor: [34, 60] },
-      riceCooker: { rect: [68, 28, 10, 9], anchor: [73, 40] },
-      desk: { rect: [62, 30, 32, 20], anchor: [78, 52] },
-      rug: { rect: [32, 64, 47, 22], anchor: [55, 76] },
-      shelf: { rect: [44, 8, 20, 52], anchor: [54, 62] },
-      door: { rect: [0, 28, 7, 42], anchor: [4, 55] }
+      window: { rect: [16, 5, 32, 36], anchor: [32, 42] },
+      bed: { rect: [12, 38, 44, 32], anchor: [33, 62] },
+      desk: { rect: [64, 35, 34, 27], anchor: [78, 56] },
+      riceCooker: { rect: [91, 47, 7, 8], anchor: [93, 56] },
+      rug: { rect: [33, 66, 45, 20], anchor: [55, 76] },
+      shelf: { rect: [48, 6, 24, 40], anchor: [58, 50] },
+      nightstand: { rect: [46, 44, 12, 14], anchor: [50, 54] }
     }
   },
   'v1-blue-calm': {
